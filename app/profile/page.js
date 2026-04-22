@@ -888,8 +888,9 @@ function ProfilePageInner() {
                     {accountEmailTrimmed && visitorPath ? (
                       <div>
                         <div className={PROFILE_FORM_LABEL}>Public portfolio URL</div>
-                        <p className="mt-0.5 text-xs leading-snug text-slate-500">
-                          Read-only CV view — same address as{" "}
+                        <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                          Share this link as your hosted CV with potential clients or customers. It&apos;s a read-only
+                          view — the same address as{" "}
                           <code className="rounded bg-slate-200/60 px-1 font-mono text-[11px]">/visitor?email=…</code>
                         </p>
                         <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">

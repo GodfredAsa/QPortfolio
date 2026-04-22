@@ -61,7 +61,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className={`flex min-h-[calc(100dvh-3.5rem)] items-center justify-center ${bg} px-6 py-16`}
+      className={`flex min-h-dvh items-center justify-center ${bg} px-6 py-16`}
     >
       <div className={`w-full max-w-[420px] p-10 ${card}`}>
         <div className="text-center">
