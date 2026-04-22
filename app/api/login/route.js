@@ -1,6 +1,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
+import { ensureDefaultAdminAccount } from "@/lib/ensureDefaultAdmin";
+import { appendLoginEvent } from "@/lib/loginEventsLog";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const ACCOUNTS_PATH = path.join(DATA_DIR, "accounts.json");
@@ -25,6 +27,7 @@ async function readAccounts() {
 
 export async function POST(req) {
   try {
+    await ensureDefaultAdminAccount();
     const body = await req.json();
     const email = normalizeEmail(body?.email);
     const password = String(body?.password || "");
@@ -45,6 +48,12 @@ export async function POST(req) {
     const ok = await bcrypt.compare(password, account.passwordHash);
     if (!ok) {
       return Response.json({ error: "Invalid credentials." }, { status: 401 });
+    }
+
+    try {
+      await appendLoginEvent();
+    } catch {
+      /* do not block sign-in if analytics log fails */
     }
 
     return Response.json(
