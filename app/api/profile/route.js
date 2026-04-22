@@ -1,8 +1,4 @@
-import { promises as fs } from "fs";
-import path from "path";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const PROFILES_PATH = path.join(DATA_DIR, "profiles.json");
+import { getProfilesArray, setProfilesArray } from "@/lib/serverDataStore";
 
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
@@ -95,26 +91,11 @@ function emptyProfile(email) {
 }
 
 async function readProfiles() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    const raw = await fs.readFile(PROFILES_PATH, "utf8");
-    const json = JSON.parse(raw);
-    if (Array.isArray(json)) return json;
-    if (json && Array.isArray(json.profiles)) return json.profiles;
-    return [];
-  } catch (err) {
-    if (err && err.code === "ENOENT") return [];
-    throw err;
-  }
+  return getProfilesArray();
 }
 
 async function writeProfiles(profiles) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(
-    PROFILES_PATH,
-    JSON.stringify({ profiles }, null, 2),
-    "utf8",
-  );
+  return setProfilesArray(profiles);
 }
 
 export async function GET(req) {
@@ -124,31 +105,38 @@ export async function GET(req) {
     return Response.json({ error: "email is required" }, { status: 400 });
   }
 
-  const profiles = await readProfiles();
-  const existing = profiles.find((p) => normalizeEmail(p.email) === email);
-  if (existing) {
-    const withHandles = {
-      ...existing,
-      profession: typeof existing.profession === "string" ? existing.profession : "",
-      shortBio: typeof existing.shortBio === "string" ? existing.shortBio : "",
-      handles:
-        existing.handles && typeof existing.handles === "object"
-          ? {
-              ...emptyHandles(),
-              ...existing.handles,
-              otherSource:
-                existing.handles.otherSource === "gitea" ? "gitea" : "bitbucket",
-            }
-          : emptyHandles(),
-    };
-    return Response.json(withHandles, { status: 200 });
+  try {
+    const profiles = await readProfiles();
+    const existing = profiles.find((p) => normalizeEmail(p.email) === email);
+    if (existing) {
+      const withHandles = {
+        ...existing,
+        profession: typeof existing.profession === "string" ? existing.profession : "",
+        shortBio: typeof existing.shortBio === "string" ? existing.shortBio : "",
+        handles:
+          existing.handles && typeof existing.handles === "object"
+            ? {
+                ...emptyHandles(),
+                ...existing.handles,
+                otherSource:
+                  existing.handles.otherSource === "gitea" ? "gitea" : "bitbucket",
+              }
+            : emptyHandles(),
+      };
+      return Response.json(withHandles, { status: 200 });
+    }
+
+    const created = emptyProfile(email);
+    profiles.push(created);
+    await writeProfiles(profiles);
+
+    return Response.json(created, { status: 200 });
+  } catch (e) {
+    if (e && e.code === "VERCEL_NO_KV") {
+      return Response.json({ error: e.message }, { status: 503 });
+    }
+    return Response.json({ error: "Invalid request." }, { status: 400 });
   }
-
-  const created = emptyProfile(email);
-  profiles.push(created);
-  await writeProfiles(profiles);
-
-  return Response.json(created, { status: 200 });
 }
 
 export async function PUT(req) {
@@ -446,8 +434,14 @@ export async function PUT(req) {
     await writeProfiles(profiles);
 
     return Response.json(next, { status: 200 });
-  } catch {
-    return Response.json({ error: "Invalid request." }, { status: 400 });
+  } catch (e) {
+    if (e && e.code === "VERCEL_NO_KV") {
+      return Response.json({ error: e.message }, { status: 503 });
+    }
+    return Response.json(
+      { error: e && e.message ? String(e.message) : "Invalid request." },
+      { status: 400 },
+    );
   }
 }
 

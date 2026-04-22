@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
 import bcrypt from "bcryptjs";
 import { ensureDefaultAdminAccount } from "@/lib/ensureDefaultAdmin";
 import { DEFAULT_ADMIN_EMAIL } from "@/lib/adminConstants";
@@ -9,25 +7,10 @@ import {
   MAX_AGE_SEC,
   signAdminSession,
 } from "@/lib/adminSession";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const ACCOUNTS_PATH = path.join(DATA_DIR, "accounts.json");
+import { getAccountsArray } from "@/lib/serverDataStore";
 
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
-}
-
-async function readAccounts() {
-  try {
-    const raw = await fs.readFile(ACCOUNTS_PATH, "utf8");
-    const json = JSON.parse(raw);
-    if (Array.isArray(json)) return json;
-    if (json && Array.isArray(json.accounts)) return json.accounts;
-    return [];
-  } catch (err) {
-    if (err && err.code === "ENOENT") return [];
-    throw err;
-  }
 }
 
 /**
@@ -54,7 +37,7 @@ export async function POST(req) {
       );
     }
 
-    const accounts = await readAccounts();
+    const accounts = await getAccountsArray();
     const account = accounts.find((a) => normalizeEmail(a.email) === email);
     if (!account?.passwordHash) {
       return NextResponse.json(
@@ -90,7 +73,10 @@ export async function POST(req) {
       secure: process.env.NODE_ENV === "production",
     });
     return res;
-  } catch {
+  } catch (e) {
+    if (e && e.code === "VERCEL_NO_KV") {
+      return NextResponse.json({ error: e.message }, { status: 503 });
+    }
     return NextResponse.json(
       { error: "Invalid request." },
       { status: 400 },
