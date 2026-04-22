@@ -124,15 +124,6 @@ function profileNavClass(active) {
   ].join(" ");
 }
 
-function IconLock({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-
 function IconUser({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -148,6 +139,25 @@ function IconLogout({ className }) {
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <polyline points="16,17,21,12,16,7" />
       <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
+function IconCopy({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function IconExternalLink({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15,3 21,3 21,9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
     </svg>
   );
 }
@@ -403,7 +413,10 @@ function ProfilePageInner() {
   const [shortBioDraft, setShortBioDraft] = useState("");
   const [genderDraft, setGenderDraft] = useState("");
   const [headlineSaveState, setHeadlineSaveState] = useState("idle");
+  const [genderSaveState, setGenderSaveState] = useState("idle");
   const [activeNav, setActiveNav] = useState("personal");
+  const [siteOrigin, setSiteOrigin] = useState("");
+  const [copyFlash, setCopyFlash] = useState(null);
 
   useEffect(() => {
     if (!email) router.replace("/login");
@@ -417,6 +430,10 @@ function ProfilePageInner() {
       /* ignore */
     }
   }, [email]);
+
+  useEffect(() => {
+    setSiteOrigin(typeof window !== "undefined" ? window.location.origin : "");
+  }, []);
 
   useEffect(() => {
     if (!email) return;
@@ -701,18 +718,34 @@ function ProfilePageInner() {
     router.replace("/login");
   }, [router]);
 
+  const copyToClipboard = useCallback(async (text, flashKey) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyFlash(flashKey);
+      window.setTimeout(() => {
+        setCopyFlash((k) => (k === flashKey ? null : k));
+      }, 2000);
+    } catch {
+      setCopyFlash("error");
+      window.setTimeout(() => setCopyFlash(null), 2000);
+    }
+  }, []);
+
   async function saveHeadline() {
     if (!email) return;
-    if (shortBioOverLimit) return;
     try {
       setHeadlineSaveState("saving");
+      const shortBioPayload = shortBioOverLimit
+        ? String(profile?.shortBio ?? "")
+        : shortBioDraft;
       const res = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
           profession: professionDraft,
-          shortBio: shortBioDraft,
+          shortBio: shortBioPayload,
           gender: genderDraft,
         }),
       });
@@ -729,6 +762,34 @@ function ProfilePageInner() {
       window.setTimeout(() => setHeadlineSaveState("idle"), 2000);
     }
   }
+
+  async function saveGenderOnly() {
+    if (!email) return;
+    try {
+      setGenderSaveState("saving");
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, gender: genderDraft }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) throw new Error(data?.error || "Save failed.");
+      setProfile(data);
+      setGenderDraft(String(data.gender || ""));
+      setGenderSaveState("saved");
+      window.setTimeout(() => setGenderSaveState("idle"), 1500);
+    } catch {
+      setGenderSaveState("error");
+      window.setTimeout(() => setGenderSaveState("idle"), 2000);
+    }
+  }
+
+  const accountEmailTrimmed =
+    accountInfo?.email && String(accountInfo.email).trim() ? String(accountInfo.email).trim() : "";
+  const visitorPath = accountEmailTrimmed
+    ? `/visitor?email=${encodeURIComponent(accountEmailTrimmed)}`
+    : "";
+  const visitorAbsoluteUrl = siteOrigin && visitorPath ? `${siteOrigin}${visitorPath}` : visitorPath;
 
   return (
     <div className="min-h-[calc(100dvh-3.5rem)] bg-[#ececec] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
@@ -750,9 +811,6 @@ function ProfilePageInner() {
                 {displayName || email || "Your name"}
               </h2>
               <p className="mt-1 text-sm text-slate-600">{professionLine}</p>
-              <p className="mt-2 max-w-[16rem] text-xs leading-relaxed text-slate-500">
-                Photo & mood: use the <span className="font-semibold text-slate-600">Menu</span> in the header.
-              </p>
             </div>
 
             <nav className="mt-6 space-y-1.5 border-t border-slate-300/30 pt-5" aria-label="Profile sections">
@@ -807,13 +865,6 @@ function ProfilePageInner() {
             </nav>
 
             <div className="mt-4 space-y-1.5 border-t border-slate-300/30 pt-4">
-              <Link
-                href={email ? `/login?email=${encodeURIComponent(email)}` : "/login"}
-                className={profileNavClass(false)}
-              >
-                <IconLock className="h-[18px] w-[18px] shrink-0" />
-                Login & password
-              </Link>
               <button type="button" onClick={onLogout} className={profileNavClass(false)}>
                 <IconLogout className="h-[18px] w-[18px] shrink-0" />
                 Log out
@@ -834,9 +885,88 @@ function ProfilePageInner() {
 
                 {accountInfo ? (
                   <div className="mt-6 space-y-4">
-                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Gender</div>
+                    {accountEmailTrimmed && visitorPath ? (
+                      <div>
+                        <div className={PROFILE_FORM_LABEL}>Public portfolio URL</div>
+                        <p className="mt-0.5 text-xs leading-snug text-slate-500">
+                          Read-only CV view — same address as{" "}
+                          <code className="rounded bg-slate-200/60 px-1 font-mono text-[11px]">/visitor?email=…</code>
+                        </p>
+                        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <div
+                            className={
+                              PROFILE_PILL_INSET +
+                              " flex min-h-[2.75rem] min-w-0 flex-1 items-center gap-2 py-2.5"
+                            }
+                          >
+                            <span className="min-w-0 flex-1 break-all text-sm font-medium text-slate-800">
+                              {visitorAbsoluteUrl || visitorPath}
+                            </span>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <Link
+                              href={visitorPath}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={PROFILE_NEU_ICON_SM}
+                              title="Open public portfolio"
+                              aria-label="Open public portfolio in new tab"
+                            >
+                              <IconExternalLink className="h-4 w-4" />
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(visitorAbsoluteUrl, "url")}
+                              className={PROFILE_NEU_ICON_SM}
+                              title="Copy URL"
+                              aria-label="Copy public portfolio URL"
+                            >
+                              <IconCopy className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {copyFlash ? (
+                      <p
+                        className={[
+                          "text-xs font-medium",
+                          copyFlash === "error" ? "text-red-600" : "text-emerald-700",
+                        ].join(" ")}
+                        role="status"
+                      >
+                        {copyFlash === "error"
+                          ? "Could not copy."
+                          : "Copied to clipboard."}
+                      </p>
+                    ) : null}
+
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Gender</div>
+                      <button
+                        type="button"
+                        onClick={saveGenderOnly}
+                        disabled={genderSaveState === "saving"}
+                        className={PROFILE_NEU_PILL + " px-4 py-2 text-xs"}
+                        aria-label="Save gender"
+                      >
+                        <IconSave className="h-3.5 w-3.5 shrink-0" />
+                        {genderSaveState === "saving" ? "Saving…" : "Save gender"}
+                      </button>
+                    </div>
+                    {genderSaveState === "saved" ? (
+                      <p className="text-xs font-medium text-emerald-700" role="status">
+                        Gender saved
+                      </p>
+                    ) : null}
+                    {genderSaveState === "error" ? (
+                      <p className="text-xs font-medium text-red-700" role="status">
+                        Could not save gender
+                      </p>
+                    ) : null}
                     <div className="flex flex-wrap gap-4 sm:gap-6">
-                      {["Male", "Female", "Other"].map((g) => {
+                      {["Male", "Female"].map((g) => {
                         const checked = genderDraft === g;
                         return (
                           <label key={g} className="inline-flex cursor-pointer items-center gap-2.5 text-sm font-medium text-slate-800">
@@ -873,16 +1003,29 @@ function ProfilePageInner() {
                       <div
                         className={
                           PROFILE_PILL_INSET +
-                          " mt-1.5 flex min-h-[2.75rem] items-center justify-between gap-3"
+                          " mt-1.5 flex min-h-[2.75rem] items-center justify-between gap-2"
                         }
                       >
                         <span className="min-w-0 break-all text-slate-800">{accountInfo.email || "—"}</span>
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
-                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-                            <path d="M20 6L9 17l-5-5" />
-                          </svg>
-                          Verified
-                        </span>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                              <path d="M20 6L9 17l-5-5" />
+                            </svg>
+                            Verified
+                          </span>
+                          {accountEmailTrimmed ? (
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(accountEmailTrimmed, "email")}
+                              className={PROFILE_NEU_ICON_SM}
+                              title="Copy email"
+                              aria-label="Copy email address"
+                            >
+                              <IconCopy className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
 
@@ -945,7 +1088,7 @@ function ProfilePageInner() {
                       <button
                         type="button"
                         onClick={saveHeadline}
-                        disabled={headlineSaveState === "saving" || shortBioOverLimit}
+                        disabled={headlineSaveState === "saving"}
                         className={PROFILE_NEU_PILL + " px-6 py-2.5"}
                         aria-label="Update personal information"
                       >
