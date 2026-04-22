@@ -255,6 +255,9 @@ export default function SiteMenu() {
   const profileHref = lastEmail
     ? `/profile?email=${encodeURIComponent(lastEmail)}`
     : "/login";
+  const visitorHref = lastEmail
+    ? `/visitor?email=${encodeURIComponent(lastEmail)}`
+    : "/visitor";
 
   const onLogout = useCallback(() => {
     try {
@@ -279,7 +282,7 @@ export default function SiteMenu() {
 
   return (
     <header
-      className="sticky top-0 z-50 w-full border-b border-white/20 bg-[#ececec]/90 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
+      className="print:hidden sticky top-0 z-50 w-full border-b border-white/20 bg-[#ececec]/90 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
     >
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <Link
@@ -547,7 +550,7 @@ export default function SiteMenu() {
                     </div>
                   )}
                   <Link
-                    href="/visitor"
+                    href={visitorHref}
                     onClick={close}
                     className={navClass(onVisitor)}
                   >

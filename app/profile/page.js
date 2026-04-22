@@ -1,7 +1,29 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { Fragment, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { getSuperPowers, mapLegacyAvatarId } from "@/lib/superPowers";
+import {
+  AUTOMATION_OPTIONS,
+  AUTOMATION_IDS,
+  CLOUD_OPTIONS,
+  CLOUD_IDS,
+  DATABASE_OPTIONS,
+  DATABASE_IDS,
+  FRAMEWORK_OPTIONS,
+  FRAMEWORK_IDS,
+  optionIconSrc,
+  PLATFORM_OPTIONS,
+  PLATFORM_IDS,
+  PROGRAMMING_LANGUAGE_OPTIONS,
+  PROGRAMMING_LANG_IDS,
+  normalizeProgrammingLanguageIds,
+  normalizeTechIds,
+  SIMPLE_ICONS_CDN,
+  TOOLS_OPTIONS,
+  TOOL_IDS,
+} from "@/lib/techOptions";
 
 function Card({ title, children, headerRight }) {
   return (
@@ -46,49 +68,6 @@ function memberSinceLabel(createdAt) {
   return d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
 }
 
-function UserDetailsCard({ account }) {
-  if (!account?.email) return null;
-  return (
-    <div
-      className="min-w-0 w-full rounded-[20px] bg-[#ececec] px-4 py-3 shadow-[inset_8px_8px_14px_rgba(0,0,0,0.06),inset_-6px_-6px_12px_rgba(255,255,255,0.92)]"
-    >
-      <div className="text-[11px] font-semibold tracking-tight text-slate-800">
-        Your account
-      </div>
-      <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
-        How you appear on this portfolio
-      </p>
-      <div className="mt-2.5 space-y-1.5 text-[12px] leading-snug text-slate-800">
-        {account.fullName ? (
-          <div className="text-sm font-semibold text-slate-900">{account.fullName}</div>
-        ) : null}
-        <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-[5.25rem,1fr] sm:items-baseline sm:gap-x-2">
-          <div className="text-slate-500">Email</div>
-          <div className="min-w-0 break-all text-slate-800">{account.email}</div>
-        </div>
-        <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-[5.25rem,1fr] sm:items-baseline sm:gap-x-2">
-          <div className="text-slate-500">Mobile</div>
-          <div className="min-w-0 text-slate-800">{formatAccountPhone(account.phone)}</div>
-        </div>
-        <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-[5.25rem,1fr] sm:items-baseline sm:gap-x-2">
-          <div className="text-slate-500">Username</div>
-          <div className="text-slate-800">
-            {account.username ? `@${account.username}` : "—"}
-          </div>
-        </div>
-        {memberSinceLabel(account.createdAt) ? (
-          <div className="border-t border-slate-300/30 pt-2 text-[11px] text-slate-500">
-            Joined{" "}
-            <span className="font-medium text-slate-600">
-              {memberSinceLabel(account.createdAt)}
-            </span>
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 const DEFAULT_HANDLES = {
   linkedIn: "",
   github: "",
@@ -125,6 +104,63 @@ const OTHER_SOURCE_CHOICES = [
 
 const HANDLE_INPUT =
   "w-full min-w-0 rounded-full bg-[#ececec] px-4 py-2.5 text-[13px] text-slate-800 placeholder:text-slate-400 outline-none shadow-[inset_8px_8px_14px_rgba(0,0,0,0.08),inset_-5px_-5px_10px_rgba(255,255,255,0.92)]";
+
+const LAST_EMAIL_KEY = "qp_last_email";
+
+const PROFILE_MAIN_CARD =
+  "rounded-[28px] bg-[#ececec] p-6 shadow-[14px_14px_28px_rgba(0,0,0,0.10),-14px_-14px_28px_rgba(255,255,255,0.92)] sm:p-8";
+
+const PROFILE_FORM_LABEL = "text-xs font-semibold text-slate-500";
+
+const PROFILE_PILL_INSET =
+  "w-full min-w-0 rounded-full border-0 bg-[#ececec] px-4 py-3 text-sm text-slate-800 shadow-[inset_8px_8px_14px_rgba(0,0,0,0.08),inset_-5px_-5px_10px_rgba(255,255,255,0.92)]";
+
+function profileNavClass(active) {
+  return [
+    "flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left text-sm font-medium transition-colors",
+    active
+      ? "bg-white/50 text-[#29243b] shadow-[inset_4px_4px_8px_rgba(0,0,0,0.05),inset_-2px_-2px_6px_rgba(255,255,255,0.9)]"
+      : "text-slate-600 hover:bg-white/30 hover:text-[#29243b]",
+  ].join(" ");
+}
+
+function IconUser({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function IconLogout({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16,17,21,12,16,7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
+function IconCopy({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function IconExternalLink({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15,3 21,3 21,9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
 
 function normalizeClientHandles(h) {
   if (!h || typeof h !== "object") return { ...DEFAULT_HANDLES };
@@ -232,315 +268,6 @@ function blankWork() {
   };
 }
 
-const DEVICON_ROOT = "https://unpkg.com/devicon@2.16.0/icons";
-const SIMPLE_ICONS_CDN =
-  "https://cdn.jsdelivr.net/npm/simple-icons@11.0.0/icons";
-
-const PROGRAMMING_LANGUAGE_OPTIONS = [
-  { id: "javascript", label: "JavaScript", path: "javascript/javascript-original" },
-  { id: "typescript", label: "TypeScript", path: "typescript/typescript-original" },
-  { id: "python", label: "Python", path: "python/python-original" },
-  { id: "java", label: "Java", path: "java/java-original" },
-  { id: "c", label: "C", path: "c/c-original" },
-  { id: "cpp", label: "C++", path: "cplusplus/cplusplus-original" },
-  { id: "csharp", label: "C#", path: "csharp/csharp-original" },
-  { id: "go", label: "Go", path: "go/go-original" },
-  { id: "rust", label: "Rust", path: "rust/rust-original" },
-  { id: "ruby", label: "Ruby", path: "ruby/ruby-original" },
-  { id: "php", label: "PHP", path: "php/php-original" },
-  { id: "swift", label: "Swift", path: "swift/swift-original" },
-  { id: "kotlin", label: "Kotlin", path: "kotlin/kotlin-original" },
-  { id: "dart", label: "Dart", path: "dart/dart-original" },
-  { id: "scala", label: "Scala", path: "scala/scala-original" },
-  { id: "elixir", label: "Elixir", path: "elixir/elixir-original" },
-  { id: "haskell", label: "Haskell", path: "haskell/haskell-original" },
-  { id: "html5", label: "HTML5", path: "html5/html5-original" },
-  { id: "css3", label: "CSS3", path: "css3/css3-original" },
-  { id: "react", label: "React", path: "react/react-original" },
-  { id: "vuejs", label: "Vue.js", path: "vuejs/vuejs-original" },
-  { id: "angular", label: "Angular", path: "angular/angular-original" },
-  { id: "nodejs", label: "Node.js", path: "nodejs/nodejs-original" },
-  { id: "svelte", label: "Svelte", path: "svelte/svelte-original" },
-  { id: "bash", label: "Bash", path: "bash/bash-original" },
-];
-
-const DATABASE_OPTIONS = [
-  { id: "mysql", label: "MySQL", path: "mysql/mysql-original" },
-  { id: "postgresql", label: "PostgreSQL", path: "postgresql/postgresql-original" },
-  { id: "mongodb", label: "MongoDB", path: "mongodb/mongodb-original" },
-  { id: "redis", label: "Redis", path: "redis/redis-original" },
-  { id: "sqlite", label: "SQLite", path: "sqlite/sqlite-original" },
-  { id: "cassandra", label: "Cassandra", path: "cassandra/cassandra-original" },
-  { id: "couchdb", label: "CouchDB", path: "couchdb/couchdb-original" },
-  {
-    id: "elasticsearch",
-    label: "Elasticsearch",
-    path: "elasticsearch/elasticsearch-original",
-  },
-  { id: "mariadb", label: "MariaDB", path: "mariadb/mariadb-original" },
-  { id: "neo4j", label: "Neo4j", path: "neo4j/neo4j-original" },
-  { id: "influxdb", label: "InfluxDB", path: "influxdb/influxdb-original" },
-  {
-    id: "mssql",
-    label: "SQL Server",
-    path: "microsoftsqlserver/microsoftsqlserver-plain",
-  },
-  { id: "oracle", label: "Oracle", path: "oracle/oracle-original" },
-  { id: "firebase", label: "Firebase", path: "firebase/firebase-plain" },
-  { id: "supabase", label: "Supabase", path: "supabase/supabase-original" },
-  { id: "dynamodb", label: "DynamoDB", path: "dynamodb/dynamodb-original" },
-];
-
-const CLOUD_OPTIONS = [
-  { id: "aws", label: "AWS", path: "amazonwebservices/amazonwebservices-original-wordmark" },
-  { id: "azure", label: "Azure", path: "azure/azure-original" },
-  { id: "gcp", label: "Google Cloud", path: "googlecloud/googlecloud-original" },
-  { id: "k8s", label: "Kubernetes", path: "kubernetes/kubernetes-plain" },
-  { id: "docker", label: "Docker", path: "docker/docker-original" },
-  { id: "heroku", label: "Heroku", path: "heroku/heroku-original" },
-  { id: "do", label: "DigitalOcean", path: "digitalocean/digitalocean-original" },
-  { id: "cloudflare", label: "Cloudflare", path: "cloudflare/cloudflare-original" },
-  { id: "nginx", label: "Nginx", path: "nginx/nginx-original" },
-  { id: "vercel", label: "Vercel", path: "vercel/vercel-original" },
-  { id: "netlify", label: "Netlify", path: "netlify/netlify-original" },
-  { id: "vagrant", label: "Vagrant", path: "vagrant/vagrant-original" },
-  { id: "prometheus", label: "Prometheus", path: "prometheus/prometheus-original" },
-  { id: "grafana", label: "Grafana", path: "grafana/grafana-original" },
-];
-
-const PLATFORM_OPTIONS = [
-  { id: "linux", label: "Linux", path: "linux/linux-original" },
-  { id: "windows", label: "Windows", path: "windows11/windows11-original" },
-  { id: "windows8", label: "Windows (legacy)", path: "windows8/windows8-original" },
-  { id: "ubuntu", label: "Ubuntu", path: "ubuntu/ubuntu-plain" },
-  { id: "centos", label: "CentOS", path: "centos/centos-original" },
-  { id: "debian", label: "Debian", path: "debian/debian-original" },
-  { id: "redhat", label: "Red Hat", path: "redhat/redhat-original" },
-  { id: "fedora", label: "Fedora", path: "fedora/fedora-original" },
-  { id: "opensuse", label: "openSUSE", path: "opensuse/opensuse-original" },
-  { id: "rockylinux", label: "Rocky Linux", path: "rockylinux/rockylinux-original" },
-  { id: "archlinux", label: "Arch Linux", path: "archlinux/archlinux-original" },
-  { id: "gentoo", label: "Gentoo", path: "gentoo/gentoo-plain" },
-  { id: "nixos", label: "NixOS", path: "nixos/nixos-original" },
-  { id: "android", label: "Android", path: "android/android-original" },
-  { id: "raspberrypi", label: "Raspberry Pi", path: "raspberrypi/raspberrypi-original" },
-  { id: "macos", label: "macOS", path: "apple/apple-original" },
-  { id: "docker", label: "Docker", path: "docker/docker-original" },
-  { id: "kubernetes", label: "Kubernetes", path: "kubernetes/kubernetes-plain" },
-  { id: "bash", label: "Bash / shell", path: "bash/bash-original" },
-  { id: "chromeos", label: "Chrome / Chromebook", path: "chrome/chrome-original" },
-];
-
-/** Grouped stacks; 12 options, save up to 5. */
-const FRAMEWORK_OPTIONS = [
-  { id: "react", label: "React", path: "react/react-original", group: "Frontend" },
-  { id: "vue", label: "Vue.js", path: "vuejs/vuejs-original", group: "Frontend" },
-  { id: "angular", label: "Angular", path: "angular/angular-original", group: "Frontend" },
-  { id: "django", label: "Django", path: "django/django-plain", group: "Python" },
-  { id: "flask", label: "Flask", path: "flask/flask-original", group: "Python" },
-  { id: "fastapi", label: "FastAPI", path: "fastapi/fastapi-original", group: "Python" },
-  { id: "spring", label: "Spring", path: "spring/spring-original", group: "Java" },
-  { id: "quarkus", label: "Quarkus", path: "quarkus/quarkus-original", group: "Java" },
-  {
-    id: "express",
-    label: "Express",
-    path: "express/express-original",
-    group: "Node / TypeScript (backend)",
-  },
-  {
-    id: "nestjs",
-    label: "NestJS",
-    path: "nestjs/nestjs-original",
-    group: "Node / TypeScript (backend)",
-  },
-  {
-    id: "fastify",
-    label: "Fastify",
-    path: "fastify/fastify-original",
-    group: "Node / TypeScript (backend)",
-  },
-  {
-    id: "trpc",
-    label: "tRPC",
-    path: "trpc/trpc-original",
-    group: "Node / TypeScript (backend)",
-  },
-];
-
-const PROGRAMMING_LANG_IDS = new Set(
-  PROGRAMMING_LANGUAGE_OPTIONS.map((o) => o.id),
-);
-const DATABASE_IDS = new Set(DATABASE_OPTIONS.map((o) => o.id));
-const CLOUD_IDS = new Set(CLOUD_OPTIONS.map((o) => o.id));
-const PLATFORM_IDS = new Set(PLATFORM_OPTIONS.map((o) => o.id));
-const FRAMEWORK_IDS = new Set(FRAMEWORK_OPTIONS.map((o) => o.id));
-
-/** Test automation, CI/CD, and IaC — save up to 5 like other tech. */
-const AUTOMATION_OPTIONS = [
-  { id: "jest", label: "Jest", path: "jest/jest-plain", group: "Test automation" },
-  { id: "mocha", label: "Mocha", path: "mocha/mocha-original", group: "Test automation" },
-  {
-    id: "selenium",
-    label: "Selenium",
-    path: "selenium/selenium-original",
-    group: "Test automation",
-  },
-  { id: "junit", label: "JUnit", path: "junit/junit-original", group: "Test automation" },
-  {
-    id: "playwright",
-    label: "Playwright",
-    simpleIcon: "playwright",
-    group: "Test automation",
-  },
-  { id: "vitest", label: "Vitest", simpleIcon: "vitest", group: "Test automation" },
-  { id: "pytest", label: "pytest", simpleIcon: "pytest", group: "Test automation" },
-  {
-    id: "githubactions",
-    label: "GitHub Actions",
-    path: "githubactions/githubactions-original",
-    group: "CI / CD",
-  },
-  { id: "gitlab", label: "GitLab CI", path: "gitlab/gitlab-original", group: "CI / CD" },
-  { id: "jenkins", label: "Jenkins", path: "jenkins/jenkins-original", group: "CI / CD" },
-  { id: "circleci", label: "CircleCI", path: "circleci/circleci-plain", group: "CI / CD" },
-  { id: "travisci", label: "Travis CI", path: "travis/travis-plain", group: "CI / CD" },
-  {
-    id: "azuredevops",
-    label: "Azure DevOps",
-    path: "azuredevops/azuredevops-original",
-    group: "CI / CD",
-  },
-  { id: "argocd", label: "Argo CD", path: "argocd/argocd-original", group: "CI / CD" },
-  {
-    id: "terraform",
-    label: "Terraform",
-    path: "terraform/terraform-original",
-    group: "IaC & config",
-  },
-  { id: "ansible", label: "Ansible", path: "ansible/ansible-original", group: "IaC & config" },
-  {
-    id: "cloudformation",
-    label: "AWS CloudFormation",
-    simpleIcon: "amazonaws",
-    group: "IaC & config",
-  },
-  { id: "puppet", label: "Puppet", simpleIcon: "puppet", group: "IaC & config" },
-  { id: "chef", label: "Chef", simpleIcon: "chef", group: "IaC & config" },
-];
-
-const AUTOMATION_IDS = new Set(AUTOMATION_OPTIONS.map((o) => o.id));
-
-const TOOLS_OPTIONS = [
-  {
-    id: "excel",
-    label: "Microsoft Excel",
-    simpleIcon: "microsoftexcel",
-    group: "Analytics & BI",
-  },
-  {
-    id: "tableau",
-    label: "Tableau",
-    simpleIcon: "tableau",
-    group: "Analytics & BI",
-  },
-  {
-    id: "powerbi",
-    label: "Power BI",
-    simpleIcon: "powerbi",
-    group: "Analytics & BI",
-  },
-  {
-    id: "googleanalytics",
-    label: "Google Analytics",
-    simpleIcon: "googleanalytics",
-    group: "Analytics & BI",
-  },
-  {
-    id: "looker",
-    label: "Looker",
-    simpleIcon: "looker",
-    group: "Analytics & BI",
-  },
-  {
-    id: "postman",
-    label: "Postman",
-    path: "postman/postman-original",
-    group: "API & integration testing",
-  },
-  {
-    id: "insomnia",
-    label: "Insomnia",
-    simpleIcon: "insomnia",
-    group: "API & integration testing",
-  },
-  {
-    id: "swagger",
-    label: "Swagger / OpenAPI",
-    simpleIcon: "swagger",
-    group: "API & integration testing",
-  },
-  {
-    id: "hoppscotch",
-    label: "Hoppscotch",
-    simpleIcon: "hoppscotch",
-    group: "API & integration testing",
-  },
-  {
-    id: "vscode",
-    label: "VS Code",
-    path: "vscode/vscode-original",
-    group: "Developer & collaboration",
-  },
-  {
-    id: "intellij",
-    label: "IntelliJ IDEA",
-    path: "intellij/intellij-original",
-    group: "Developer & collaboration",
-  },
-  { id: "git", label: "Git", path: "git/git-original", group: "Developer & collaboration" },
-  { id: "jira", label: "Jira", path: "jira/jira-original", group: "Developer & collaboration" },
-  { id: "figma", label: "Figma", path: "figma/figma-original", group: "Developer & collaboration" },
-  { id: "slack", label: "Slack", path: "slack/slack-original", group: "Developer & collaboration" },
-  {
-    id: "notion",
-    label: "Notion",
-    path: "notion/notion-original",
-    group: "Developer & collaboration",
-  },
-];
-
-const TOOL_IDS = new Set(TOOLS_OPTIONS.map((o) => o.id));
-
-function deviconUrl(path) {
-  return `${DEVICON_ROOT}/${path}.svg`;
-}
-
-/** Devicon `path`, or Simple Icons `simpleIcon` slug, or full `iconSrc` URL. */
-function optionIconSrc(o) {
-  if (o.iconSrc) return o.iconSrc;
-  if (o.simpleIcon) return `${SIMPLE_ICONS_CDN}/${o.simpleIcon}.svg`;
-  if (o.path) return deviconUrl(o.path);
-  return "";
-}
-
-function normalizeTechIds(raw, idSet, max = 5) {
-  const arr = Array.isArray(raw) ? raw : [];
-  const seen = new Set();
-  const out = [];
-  for (const x of arr) {
-    const id = typeof x === "string" ? x.trim() : String(x || "").trim();
-    if (!id || !idSet.has(id) || seen.has(id)) continue;
-    seen.add(id);
-    out.push(id);
-    if (out.length >= max) break;
-  }
-  return out;
-}
-
-function normalizeProgrammingLanguageIds(raw) {
-  return normalizeTechIds(raw, PROGRAMMING_LANG_IDS, 5);
-}
-
 function MaxFiveTechPicker({
   options,
   selectedIds,
@@ -646,7 +373,7 @@ function MaxFiveTechPicker({
   );
 }
 
-export default function ProfilePage() {
+function ProfilePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
@@ -684,7 +411,12 @@ export default function ProfilePage() {
 
   const [professionDraft, setProfessionDraft] = useState("");
   const [shortBioDraft, setShortBioDraft] = useState("");
+  const [genderDraft, setGenderDraft] = useState("");
   const [headlineSaveState, setHeadlineSaveState] = useState("idle");
+  const [genderSaveState, setGenderSaveState] = useState("idle");
+  const [activeNav, setActiveNav] = useState("personal");
+  const [siteOrigin, setSiteOrigin] = useState("");
+  const [copyFlash, setCopyFlash] = useState(null);
 
   useEffect(() => {
     if (!email) router.replace("/login");
@@ -698,6 +430,10 @@ export default function ProfilePage() {
       /* ignore */
     }
   }, [email]);
+
+  useEffect(() => {
+    setSiteOrigin(typeof window !== "undefined" ? window.location.origin : "");
+  }, []);
 
   useEffect(() => {
     if (!email) return;
@@ -786,6 +522,7 @@ export default function ProfilePage() {
         setHandlesDraft(normalizeClientHandles(data?.handles));
         setProfessionDraft(String(data?.profession || ""));
         setShortBioDraft(String(data?.shortBio || ""));
+        setGenderDraft(String(data?.gender || ""));
       } catch (e) {
         if (!cancelled) setLoadError(e?.message || "Failed to load profile.");
       }
@@ -953,18 +690,63 @@ export default function ProfilePage() {
   const shortBioWordCount = countWords(shortBioDraft);
   const shortBioOverLimit = shortBioWordCount > 100;
 
+  const sidebarAvatar = useMemo(() => {
+    if (!profile) return null;
+    const url = profile.imageUrl;
+    if (url) return { type: "url", url };
+    const powers = getSuperPowers();
+    const id = mapLegacyAvatarId(profile.avatarId);
+    const p = powers.find((x) => x.id === id) || powers[0];
+    return p ? { type: "url", url: p.dataUrl } : null;
+  }, [profile]);
+
+  const displayName = accountInfo?.fullName?.trim() || null;
+  const professionLine = (professionDraft || "").trim() || (profile?.profession || "").trim() || "Your profession";
+
+  const goToSection = useCallback((navKey, elId) => {
+    setActiveNav(navKey);
+    const el = document.getElementById(elId);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  const onLogout = useCallback(() => {
+    try {
+      localStorage.removeItem(LAST_EMAIL_KEY);
+    } catch {
+      /* ignore */
+    }
+    router.replace("/login");
+  }, [router]);
+
+  const copyToClipboard = useCallback(async (text, flashKey) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyFlash(flashKey);
+      window.setTimeout(() => {
+        setCopyFlash((k) => (k === flashKey ? null : k));
+      }, 2000);
+    } catch {
+      setCopyFlash("error");
+      window.setTimeout(() => setCopyFlash(null), 2000);
+    }
+  }, []);
+
   async function saveHeadline() {
     if (!email) return;
-    if (shortBioOverLimit) return;
     try {
       setHeadlineSaveState("saving");
+      const shortBioPayload = shortBioOverLimit
+        ? String(profile?.shortBio ?? "")
+        : shortBioDraft;
       const res = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
           profession: professionDraft,
-          shortBio: shortBioDraft,
+          shortBio: shortBioPayload,
+          gender: genderDraft,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -972,6 +754,7 @@ export default function ProfilePage() {
       setProfile(data);
       setProfessionDraft(String(data.profession || ""));
       setShortBioDraft(String(data.shortBio || ""));
+      setGenderDraft(String(data.gender || ""));
       setHeadlineSaveState("saved");
       window.setTimeout(() => setHeadlineSaveState("idle"), 1500);
     } catch {
@@ -980,99 +763,360 @@ export default function ProfilePage() {
     }
   }
 
+  async function saveGenderOnly() {
+    if (!email) return;
+    try {
+      setGenderSaveState("saving");
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, gender: genderDraft }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) throw new Error(data?.error || "Save failed.");
+      setProfile(data);
+      setGenderDraft(String(data.gender || ""));
+      setGenderSaveState("saved");
+      window.setTimeout(() => setGenderSaveState("idle"), 1500);
+    } catch {
+      setGenderSaveState("error");
+      window.setTimeout(() => setGenderSaveState("idle"), 2000);
+    }
+  }
+
+  const accountEmailTrimmed =
+    accountInfo?.email && String(accountInfo.email).trim() ? String(accountInfo.email).trim() : "";
+  const visitorPath = accountEmailTrimmed
+    ? `/visitor?email=${encodeURIComponent(accountEmailTrimmed)}`
+    : "";
+  const visitorAbsoluteUrl = siteOrigin && visitorPath ? `${siteOrigin}${visitorPath}` : visitorPath;
+
   return (
-    <div className="min-h-[calc(100dvh-3.5rem)] bg-[#ececec] px-6 py-16">
-      <div className="mx-auto w-full max-w-[980px] rounded-[32px] bg-[#ececec] p-10 shadow-[18px_18px_42px_rgba(0,0,0,0.10),-18px_-18px_42px_rgba(255,255,255,0.95)]">
-        <div className="w-full min-w-0">
-          <div className="flex min-w-0 flex-col gap-3">
-            {accountInfo ? <UserDetailsCard account={accountInfo} /> : null}
-            {profile ? (
-              <div
-                className="w-full min-w-0 rounded-[20px] bg-[#ececec] px-4 py-3 shadow-[inset_8px_8px_14px_rgba(0,0,0,0.06),inset_-6px_-6px_12px_rgba(255,255,255,0.92)]"
+    <div className="min-h-[calc(100dvh-3.5rem)] bg-[#ececec] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
+        <aside className="w-full shrink-0 lg:sticky lg:top-20 lg:w-[min(20rem,100%)]">
+          <div className={PROFILE_MAIN_CARD}>
+            <div className="flex flex-col items-center text-center">
+              <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-full border border-slate-200/50 bg-white/30 shadow-[8px_8px_20px_rgba(0,0,0,0.08),-4px_-4px_12px_rgba(255,255,255,0.9)] sm:h-32 sm:w-32">
+                {sidebarAvatar ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={sidebarAvatar.url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="grid h-full w-full place-items-center text-4xl text-slate-400">
+                    …
+                  </div>
+                )}
+              </div>
+              <h2 className="mt-4 text-lg font-bold tracking-tight text-[#0e172a] sm:text-xl">
+                {displayName || email || "Your name"}
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">{professionLine}</p>
+            </div>
+
+            <nav className="mt-6 space-y-1.5 border-t border-slate-300/30 pt-5" aria-label="Profile sections">
+              <button
+                type="button"
+                onClick={() => goToSection("personal", "profile-section-personal")}
+                className={profileNavClass(activeNav === "personal")}
               >
-                <div className="text-[11px] font-semibold text-slate-800">
-                  Role & summary
-                </div>
-                <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
-                  How you describe yourself in one line, plus a short intro (max
-                  100 words).
+                <IconUser className="h-[18px] w-[18px] shrink-0" />
+                Personal information
+              </button>
+              <button
+                type="button"
+                onClick={() => goToSection("links", "profile-section-links")}
+                className={profileNavClass(activeNav === "links")}
+              >
+                <span className="grid h-[18px] w-[18px] shrink-0 place-items-center opacity-90" aria-hidden>
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                </span>
+                Profile links
+              </button>
+              <button
+                type="button"
+                onClick={() => goToSection("experience", "profile-section-experience")}
+                className={profileNavClass(activeNav === "experience")}
+              >
+                <span className="grid h-[18px] w-[18px] shrink-0 place-items-center" aria-hidden>
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 20V10l8-4 8 4v10" />
+                    <path d="M4 10l8 4 8-4" />
+                    <path d="M12 6v12" />
+                  </svg>
+                </span>
+                Education & work
+              </button>
+              <button
+                type="button"
+                onClick={() => goToSection("skills", "profile-section-skills")}
+                className={profileNavClass(activeNav === "skills")}
+              >
+                <span className="grid h-[18px] w-[18px] shrink-0 place-items-center" aria-hidden>
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
+                  </svg>
+                </span>
+                Skills
+              </button>
+            </nav>
+
+            <div className="mt-4 space-y-1.5 border-t border-slate-300/30 pt-4">
+              <button type="button" onClick={onLogout} className={profileNavClass(false)}>
+                <IconLogout className="h-[18px] w-[18px] shrink-0" />
+                Log out
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <div className="min-w-0 flex-1 space-y-6">
+          {profile ? (
+            <section id="profile-section-personal" className="scroll-mt-24">
+              <div className={PROFILE_MAIN_CARD}>
+                <h1 className="text-xl font-bold text-[#0e172a] sm:text-2xl">Personal information</h1>
+                <p className="mt-1.5 text-sm text-slate-500">
+                  Account details and how you describe yourself. Fields from signup are read-only; update headline and
+                  description below.
                 </p>
-                <div className="mt-2.5">
-                  <div className="text-[10px] font-semibold text-slate-500">
-                    Profession
-                  </div>
-                  <input
-                    type="text"
-                    value={professionDraft}
-                    onChange={(e) => setProfessionDraft(e.target.value)}
-                    maxLength={200}
-                    className={
-                      HANDLE_INPUT +
-                      " mt-0.5 font-medium text-slate-900"
-                    }
-                    placeholder="e.g. Software engineer · Data analyst"
-                  />
-                </div>
-                <div className="mt-2.5">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <div className="text-[10px] font-semibold text-slate-500">
-                      Short description
+
+                {accountInfo ? (
+                  <div className="mt-6 space-y-4">
+                    {accountEmailTrimmed && visitorPath ? (
+                      <div>
+                        <div className={PROFILE_FORM_LABEL}>Public portfolio URL</div>
+                        <p className="mt-0.5 text-xs leading-snug text-slate-500">
+                          Read-only CV view — same address as{" "}
+                          <code className="rounded bg-slate-200/60 px-1 font-mono text-[11px]">/visitor?email=…</code>
+                        </p>
+                        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <div
+                            className={
+                              PROFILE_PILL_INSET +
+                              " flex min-h-[2.75rem] min-w-0 flex-1 items-center gap-2 py-2.5"
+                            }
+                          >
+                            <span className="min-w-0 flex-1 break-all text-sm font-medium text-slate-800">
+                              {visitorAbsoluteUrl || visitorPath}
+                            </span>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <Link
+                              href={visitorPath}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={PROFILE_NEU_ICON_SM}
+                              title="Open public portfolio"
+                              aria-label="Open public portfolio in new tab"
+                            >
+                              <IconExternalLink className="h-4 w-4" />
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(visitorAbsoluteUrl, "url")}
+                              className={PROFILE_NEU_ICON_SM}
+                              title="Copy URL"
+                              aria-label="Copy public portfolio URL"
+                            >
+                              <IconCopy className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {copyFlash ? (
+                      <p
+                        className={[
+                          "text-xs font-medium",
+                          copyFlash === "error" ? "text-red-600" : "text-emerald-700",
+                        ].join(" ")}
+                        role="status"
+                      >
+                        {copyFlash === "error"
+                          ? "Could not copy."
+                          : "Copied to clipboard."}
+                      </p>
+                    ) : null}
+
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Gender</div>
+                      <button
+                        type="button"
+                        onClick={saveGenderOnly}
+                        disabled={genderSaveState === "saving"}
+                        className={PROFILE_NEU_PILL + " px-4 py-2 text-xs"}
+                        aria-label="Save gender"
+                      >
+                        <IconSave className="h-3.5 w-3.5 shrink-0" />
+                        {genderSaveState === "saving" ? "Saving…" : "Save gender"}
+                      </button>
                     </div>
-                    <div
-                      className={[
-                        "text-[10px] font-medium tabular-nums",
-                        shortBioOverLimit
-                          ? "text-red-600"
-                          : "text-slate-500",
-                      ].join(" ")}
-                    >
-                      {shortBioWordCount} / 100 words
+                    {genderSaveState === "saved" ? (
+                      <p className="text-xs font-medium text-emerald-700" role="status">
+                        Gender saved
+                      </p>
+                    ) : null}
+                    {genderSaveState === "error" ? (
+                      <p className="text-xs font-medium text-red-700" role="status">
+                        Could not save gender
+                      </p>
+                    ) : null}
+                    <div className="flex flex-wrap gap-4 sm:gap-6">
+                      {["Male", "Female"].map((g) => {
+                        const checked = genderDraft === g;
+                        return (
+                          <label key={g} className="inline-flex cursor-pointer items-center gap-2.5 text-sm font-medium text-slate-800">
+                            <input
+                              type="radio"
+                              name="profile-gender"
+                              checked={checked}
+                              onChange={() => setGenderDraft(g)}
+                              className="h-4 w-4 accent-[#29243b]"
+                            />
+                            {g}
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+                      <div>
+                        <div className={PROFILE_FORM_LABEL}>Full name</div>
+                        <div className={PROFILE_PILL_INSET + " mt-1.5 text-slate-700"}>
+                          {accountInfo.fullName?.trim() || "—"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className={PROFILE_FORM_LABEL}>Username</div>
+                        <div className={PROFILE_PILL_INSET + " mt-1.5 text-slate-700"}>
+                          {accountInfo.username ? `@${accountInfo.username}` : "—"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className={PROFILE_FORM_LABEL}>Email</div>
+                      <div
+                        className={
+                          PROFILE_PILL_INSET +
+                          " mt-1.5 flex min-h-[2.75rem] items-center justify-between gap-2"
+                        }
+                      >
+                        <span className="min-w-0 break-all text-slate-800">{accountInfo.email || "—"}</span>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                              <path d="M20 6L9 17l-5-5" />
+                            </svg>
+                            Verified
+                          </span>
+                          {accountEmailTrimmed ? (
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(accountEmailTrimmed, "email")}
+                              className={PROFILE_NEU_ICON_SM}
+                              title="Copy email"
+                              aria-label="Copy email address"
+                            >
+                              <IconCopy className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+                      <div>
+                        <div className={PROFILE_FORM_LABEL}>Phone number</div>
+                        <div className={PROFILE_PILL_INSET + " mt-1.5 text-slate-700"}>
+                          {formatAccountPhone(accountInfo.phone)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className={PROFILE_FORM_LABEL}>Member since</div>
+                        <div className={PROFILE_PILL_INSET + " mt-1.5 text-slate-700"}>
+                          {memberSinceLabel(accountInfo.createdAt) || "—"}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <textarea
-                    value={shortBioDraft}
-                    onChange={(e) => setShortBioDraft(e.target.value)}
-                    className={HEADLINE_TEXTAREA + " mt-0.5"}
-                    placeholder="A brief overview of your background, focus, and what you care about in your work…"
-                    rows={5}
-                    aria-label="Short profile description"
-                  />
-                </div>
-                <div className="flex w-full flex-col items-end gap-1.5 pt-1">
-                  <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:gap-3">
-                    <button
-                      type="button"
-                      onClick={saveHeadline}
-                      disabled={
-                        headlineSaveState === "saving" || shortBioOverLimit
-                      }
-                      className={PROFILE_NEU_PILL + " px-5 py-2.5"}
-                      aria-label="Update role and summary"
-                    >
-                      <IconSave className="h-4 w-4 shrink-0" />
-                      {headlineSaveState === "saving" ? "Updating…" : "Update"}
-                    </button>
+                ) : null}
+
+                <div className="mt-6 border-t border-slate-300/30 pt-6">
+                  <div className="text-sm font-semibold text-slate-800">Role & summary</div>
+                  <p className="mt-0.5 text-sm leading-relaxed text-slate-500">
+                    How you describe yourself in one line, plus a short intro (max 100 words).
+                  </p>
+                  <div className="mt-4">
+                    <div className={PROFILE_FORM_LABEL}>Profession</div>
+                    <input
+                      type="text"
+                      value={professionDraft}
+                      onChange={(e) => setProfessionDraft(e.target.value)}
+                      maxLength={200}
+                      className={HANDLE_INPUT + " mt-1.5 font-medium text-slate-900"}
+                      placeholder="e.g. Software engineer · Data analyst"
+                    />
                   </div>
-                  {headlineSaveState === "saved" ? (
-                    <span className="text-sm font-semibold text-slate-600">Updated</span>
-                  ) : null}
-                  {headlineSaveState === "error" ? (
-                    <span className="text-sm font-semibold text-red-700">Update failed</span>
-                  ) : null}
+                  <div className="mt-4">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <div className={PROFILE_FORM_LABEL}>Short description</div>
+                      <div
+                        className={[
+                          "text-xs font-medium tabular-nums",
+                          shortBioOverLimit ? "text-red-600" : "text-slate-500",
+                        ].join(" ")}
+                      >
+                        {shortBioWordCount} / 100 words
+                      </div>
+                    </div>
+                    <textarea
+                      value={shortBioDraft}
+                      onChange={(e) => setShortBioDraft(e.target.value)}
+                      className={HEADLINE_TEXTAREA + " mt-1.5"}
+                      placeholder="A brief overview of your background, focus, and what you care about in your work…"
+                      rows={5}
+                      aria-label="Short profile description"
+                    />
+                  </div>
+                  <div className="mt-4 flex w-full flex-col items-end gap-1.5">
+                    <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:gap-3">
+                      <button
+                        type="button"
+                        onClick={saveHeadline}
+                        disabled={headlineSaveState === "saving"}
+                        className={PROFILE_NEU_PILL + " px-6 py-2.5"}
+                        aria-label="Update personal information"
+                      >
+                        <IconSave className="h-4 w-4 shrink-0" />
+                        {headlineSaveState === "saving" ? "Updating…" : "Update"}
+                      </button>
+                    </div>
+                    {headlineSaveState === "saved" ? (
+                      <span className="text-sm font-semibold text-slate-600">Updated</span>
+                    ) : null}
+                    {headlineSaveState === "error" ? (
+                      <span className="text-sm font-semibold text-red-700">Update failed</span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
-            ) : null}
-          </div>
-        </div>
+            </section>
+          ) : null}
 
         {profile ? (
+          <section id="profile-section-links" className="scroll-mt-24">
           <div
-            className="mt-4 w-full min-w-0 rounded-[20px] bg-[#ececec] p-4 shadow-[inset_8px_8px_14px_rgba(0,0,0,0.06),inset_-6px_-6px_12px_rgba(255,255,255,0.92)]"
+            className="w-full min-w-0 rounded-[20px] bg-[#ececec] p-5 shadow-[inset_8px_8px_14px_rgba(0,0,0,0.06),inset_-6px_-6px_12px_rgba(255,255,255,0.92)] sm:p-6"
           >
-            <div className="text-[11px] font-semibold text-slate-800">
+            <div className="text-base font-semibold text-slate-800">
               Profile links
             </div>
-            <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
+            <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
               Add public URLs. Pick Bitbucket or Gitea for one more repo host
               (besides GitHub and GitLab above).
             </p>
@@ -1189,6 +1233,7 @@ export default function ProfilePage() {
               ) : null}
             </div>
           </div>
+          </section>
         ) : null}
 
         {loadError ? (
@@ -1197,7 +1242,8 @@ export default function ProfilePage() {
           </div>
         ) : null}
 
-        <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
+        <section id="profile-section-experience" className="scroll-mt-24">
+        <div className="mt-2 grid grid-cols-1 gap-5 md:grid-cols-2">
           <Card
             title="Education"
             headerRight={
@@ -1439,6 +1485,11 @@ export default function ProfilePage() {
               </div>
             )}
           </Card>
+        </div>
+        </section>
+
+        <section id="profile-section-skills" className="scroll-mt-24">
+        <div className="mt-2 grid grid-cols-1 gap-5 md:grid-cols-2">
           <Card title="Programming languages">
             {!profile ? (
               "Loading..."
@@ -1638,7 +1689,23 @@ export default function ProfilePage() {
             )}
           </Card>
         </div>
+        </section>
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[calc(100dvh-3.5rem)] flex-1 items-center justify-center bg-[#ececec] text-sm text-slate-500">
+          Loading…
+        </div>
+      }
+    >
+      <ProfilePageInner />
+    </Suspense>
   );
 }

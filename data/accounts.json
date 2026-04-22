@@ -28,6 +28,15 @@
       "username": "degreatasa",
       "passwordHash": "$2b$10$x3wz7D0W2aXIIp7e5UxvoeYAJ.L.drAGw6Ej/ldv9U/R5yjZ.i9XG",
       "createdAt": "2026-04-22T15:52:59.160Z"
+    },
+    {
+      "id": "81151be0-219e-470d-8cbd-1bc2c6a751bd",
+      "email": "godfred.asumadu.asamoah@gmail.com",
+      "phone": "233548670632",
+      "fullName": "Godfred Asumadu Asamoah",
+      "username": "DeFRED",
+      "passwordHash": "$2b$10$vm/VuVf7gnqy901313TLnePGQ1pwS3mV7HKrLFcj.BoQm0Dn8Wr/6",
+      "createdAt": "2026-04-22T20:38:18.713Z"
     }
   ]
 }
