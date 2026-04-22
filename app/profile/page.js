@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Fragment, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { DEFAULT_ADMIN_EMAIL } from "@/lib/adminConstants";
 import { getSuperPowers, mapLegacyAvatarId } from "@/lib/superPowers";
 import {
   AUTOMATION_OPTIONS,
@@ -791,6 +792,13 @@ function ProfilePageInner() {
     : "";
   const visitorAbsoluteUrl = siteOrigin && visitorPath ? `${siteOrigin}${visitorPath}` : visitorPath;
 
+  const showAdminAnalyticsLink = useMemo(() => {
+    const e = String(accountInfo?.email || email || "")
+      .trim()
+      .toLowerCase();
+    return Boolean(e && e === DEFAULT_ADMIN_EMAIL.toLowerCase());
+  }, [accountInfo?.email, email]);
+
   return (
     <div className="min-h-[calc(100dvh-3.5rem)] bg-[#ececec] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
@@ -862,6 +870,30 @@ function ProfilePageInner() {
                 </span>
                 Skills
               </button>
+              {showAdminAnalyticsLink ? (
+                <Link
+                  href="/admin"
+                  className={profileNavClass(false)}
+                >
+                  <span className="grid h-[18px] w-[18px] shrink-0 place-items-center" aria-hidden>
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M3 3v18h18" />
+                      <path d="M7 16v-3" />
+                      <path d="M12 16V8" />
+                      <path d="M17 16v-6" />
+                    </svg>
+                  </span>
+                  Analytics
+                </Link>
+              ) : null}
             </nav>
 
             <div className="mt-4 space-y-1.5 border-t border-slate-300/30 pt-4">
