@@ -69,7 +69,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center bg-[#ececec] px-6 py-16">
+    <div className="flex min-h-dvh items-center justify-center bg-[#ececec] px-6 py-16">
       <div className="w-full max-w-[420px] rounded-[32px] bg-[#ececec] p-10 shadow-[18px_18px_42px_rgba(0,0,0,0.10),-18px_-18px_42px_rgba(255,255,255,0.95)]">
         <div className="text-center">
           <div className="mb-4 flex justify-center">
