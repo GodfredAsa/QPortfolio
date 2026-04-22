@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
+import { ensureDefaultAdminAccount } from "@/lib/ensureDefaultAdmin";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const ACCOUNTS_PATH = path.join(DATA_DIR, "accounts.json");
@@ -76,6 +77,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
+    await ensureDefaultAdminAccount();
     const body = await req.json();
 
     const email = normalizeEmail(body?.email);
