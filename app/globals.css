@@ -24,3 +24,60 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Visitor CV: print / Save as PDF — same layout as screen (colors, 2 columns, no clipping) */
+@media print {
+  @page {
+    margin: 12mm;
+    size: a4;
+  }
+  :root {
+    color-scheme: light;
+  }
+  /* Flex layout on body breaks / clips many print engines — use normal flow */
+  body {
+    display: block !important;
+    min-height: auto !important;
+    background: #ececec !important;
+    color: #171717 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  /* Root layout: content wrapper (sibling of header) */
+  body > div.min-h-0 {
+    min-height: auto !important;
+    display: block !important;
+    flex: none !important;
+  }
+  main[aria-label="Public portfolio"] {
+    display: block !important;
+    flex: none !important;
+    min-height: auto !important;
+  }
+  html {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .visitor-cv-page {
+    background: #ececec !important;
+    /* Match desktop: sm:px-8 sm:py-10 */
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    padding-top: 2.5rem !important;
+    padding-bottom: 2.5rem !important;
+  }
+  #visitor-cv-print-root {
+    width: 100% !important;
+    max-width: 64rem !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    overflow: visible !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .visitor-cv-page img,
+  .visitor-cv-page svg {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

@@ -18,7 +18,10 @@ import { getSuperPowers, mapLegacyAvatarId } from "@/lib/superPowers";
 
 /** One neumorphic “sheet” containing the full CV (template-style layout) */
 const CV_SHEET =
-  "overflow-hidden rounded-[28px] bg-[#ececec] p-5 shadow-[16px_16px_36px_rgba(0,0,0,0.11),-14px_-14px_32px_rgba(255,255,255,0.94)] sm:p-8 md:p-10";
+  "overflow-hidden rounded-[28px] bg-[#ececec] p-5 shadow-[16px_16px_36px_rgba(0,0,0,0.11),-14px_-14px_32px_rgba(255,255,255,0.94)] sm:p-8 md:p-10 print:overflow-visible print:[print-color-adjust:exact] print:break-inside-auto";
+
+const PDF_ACTION_PILL =
+  "inline-flex items-center gap-2 rounded-full border-0 bg-[#ececec] px-4 py-2.5 text-sm font-semibold text-[#29243b] shadow-[12px_12px_24px_rgba(0,0,0,0.10),-12px_-12px_24px_rgba(255,255,255,0.92)] transition-transform hover:-translate-y-0.5";
 
 const H_RULE = "border-0 border-t border-slate-400/45";
 
@@ -103,7 +106,18 @@ function IconMail() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-500" aria-hidden>
       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-      <polyline points="22,6 12,13 2,6" />
+      <polyline points="2,6 12,13 22,6" />
+    </svg>
+  );
+}
+
+function IconFileDown({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14,2 14,8 20,8" />
+      <line x1="12" y1="18" x2="12" y2="11" />
+      <polyline points="9,15 12,18 15,15" />
     </svg>
   );
 }
@@ -254,22 +268,38 @@ export default function VisitorCvClient() {
   const nameCaps = (displayName || emailLine || "Portfolio").toLocaleUpperCase();
   const titleCaps = (profLine || "Professional title").toLocaleUpperCase();
 
+  function handleDownloadPdf() {
+    window.print();
+  }
+
   return (
-    <div className="min-h-0 flex-1 bg-[#ececec] px-4 py-8 sm:px-8 sm:py-10">
+    <div className="visitor-cv-page min-h-0 flex-1 bg-[#ececec] px-4 py-8 sm:px-8 sm:py-10 print:bg-[#ececec]">
       <div className="mx-auto w-full max-w-5xl">
-        <article className={CV_SHEET}>
+        <div className="mb-4 flex flex-wrap items-center justify-end gap-2 sm:mb-5 print:hidden">
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            className={PDF_ACTION_PILL}
+            title="Opens your browser print dialog — choose &quot;Save as PDF&quot; (or &quot;Microsoft Print to PDF&quot;)."
+            aria-label="Download as PDF. Opens the print dialog; pick Save as PDF or Microsoft Print to PDF."
+          >
+            <IconFileDown className="h-4 w-4 shrink-0" />
+            Download PDF
+          </button>
+        </div>
+        <article className={CV_SHEET} id="visitor-cv-print-root">
           {/* —— Header: name (left) + contact (right) —— */}
-          <header className="grid grid-cols-1 gap-8 md:grid-cols-2 md:items-start md:gap-x-12">
+          <header className="grid grid-cols-1 gap-8 break-inside-avoid md:grid-cols-2 md:items-start md:gap-x-12 print:grid-cols-2 print:items-start print:gap-x-12">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">
                 {avatar ? (
-                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-300/40 bg-white/30 shadow-[4px_4px_10px_rgba(0,0,0,0.06)] sm:h-20 sm:w-20">
+                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-300/40 bg-white/30 shadow-[4px_4px_10px_rgba(0,0,0,0.06)] sm:h-20 sm:w-20 print:h-20 print:w-20">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={avatar.url} alt="" className="h-full w-full object-cover" />
                   </div>
                 ) : null}
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-2xl font-bold uppercase leading-tight tracking-[0.12em] text-[#0a0a0a] sm:text-3xl md:text-4xl">
+                  <h1 className="text-2xl font-bold uppercase leading-tight tracking-[0.12em] text-[#0a0a0a] sm:text-3xl md:text-4xl print:text-4xl">
                     {nameCaps}
                   </h1>
                   {profile?.profileMood?.type === "emoji" ? (
@@ -282,13 +312,13 @@ export default function VisitorCvClient() {
                   ) : null}
                 </div>
               </div>
-              <p className="mt-2 text-sm font-medium uppercase tracking-[0.2em] text-slate-600 sm:text-base">
+              <p className="mt-2 text-sm font-medium uppercase tracking-[0.2em] text-slate-600 sm:text-base print:text-base">
                 {titleCaps}
               </p>
               <div className="mt-3 h-px w-full max-w-[12rem] bg-slate-500/50" />
             </div>
 
-            <div className="flex min-w-0 flex-col gap-2 md:items-end md:text-right">
+            <div className="flex min-w-0 flex-col gap-2 md:items-end md:text-right print:items-end print:text-right">
               {phoneLine ? (
                 <ContactLine value={phoneLine}>
                   <IconPhone />
@@ -360,9 +390,9 @@ export default function VisitorCvClient() {
           </header>
 
           {/* —— Professional summary (full width, banded like classic CV) —— */}
-          <div className="my-6 border-0 border-y border-slate-400/45 py-5 sm:my-8 sm:py-6" aria-label="Professional summary">
+          <div className="my-6 border-0 border-y border-slate-400/45 py-5 sm:my-8 sm:py-6 print:my-8 print:py-6" aria-label="Professional summary">
             {bio ? (
-              <p className="text-justify text-[15px] italic leading-relaxed text-slate-700 sm:text-base">{bio}</p>
+              <p className="text-justify text-[15px] italic leading-relaxed text-slate-700 sm:text-base print:text-base">{bio}</p>
             ) : (
               <p className="text-justify text-sm italic text-slate-500">
                 Add a short professional summary on your profile to show it here.
@@ -371,9 +401,9 @@ export default function VisitorCvClient() {
           </div>
 
           {/* —— Two columns: skills + education | work experience —— */}
-          <div className="mt-6 grid grid-cols-1 gap-8 lg:mt-8 lg:grid-cols-12 lg:gap-0 lg:divide-x lg:divide-slate-400/40">
+          <div className="mt-6 grid grid-cols-1 gap-8 lg:mt-8 lg:grid-cols-12 lg:gap-0 lg:divide-x lg:divide-slate-400/40 print:mt-8 print:grid-cols-12 print:gap-0 print:divide-x print:divide-slate-400/40">
             {/* Left ~ 1/3 */}
-            <div className="min-w-0 space-y-8 lg:col-span-4 lg:pr-8">
+            <div className="min-w-0 space-y-8 lg:col-span-4 lg:pr-8 print:col-span-4 print:pr-8">
               <section>
                 <h2 className={SECTION_LABEL}>Core skills</h2>
 
@@ -443,7 +473,7 @@ export default function VisitorCvClient() {
             </div>
 
             {/* Right ~ 2/3 */}
-            <div className="min-w-0 lg:col-span-8 lg:pl-8">
+            <div className="min-w-0 lg:col-span-8 lg:pl-8 print:col-span-8 print:pl-8">
               <section>
                 <h2 className={SECTION_LABEL}>Work experience</h2>
                 {work.length === 0 ? (
