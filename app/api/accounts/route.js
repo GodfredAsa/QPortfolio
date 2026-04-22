@@ -1,10 +1,6 @@
-import { promises as fs } from "fs";
-import path from "path";
 import bcrypt from "bcryptjs";
 import { ensureDefaultAdminAccount } from "@/lib/ensureDefaultAdmin";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const ACCOUNTS_PATH = path.join(DATA_DIR, "accounts.json");
+import { getAccountsArray, setAccountsArray } from "@/lib/serverDataStore";
 
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
@@ -19,27 +15,8 @@ function isValidPhone(digits) {
   return typeof digits === "string" && digits.length >= 10 && digits.length <= 15;
 }
 
-async function readAccounts() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    const raw = await fs.readFile(ACCOUNTS_PATH, "utf8");
-    const json = JSON.parse(raw);
-    if (Array.isArray(json)) return json;
-    if (json && Array.isArray(json.accounts)) return json.accounts;
-    return [];
-  } catch (err) {
-    if (err && err.code === "ENOENT") return [];
-    throw err;
-  }
-}
-
-async function writeAccounts(accounts) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(
-    ACCOUNTS_PATH,
-    JSON.stringify({ accounts }, null, 2),
-    "utf8",
-  );
+function readAccounts() {
+  return getAccountsArray();
 }
 
 function accountPhoneDigits(phone) {
@@ -70,7 +47,10 @@ export async function GET(req) {
       },
       { status: 200 },
     );
-  } catch {
+  } catch (e) {
+    if (e && e.code === "VERCEL_NO_KV") {
+      return Response.json({ error: e.message }, { status: 503 });
+    }
     return Response.json({ error: "Invalid request." }, { status: 400 });
   }
 }
@@ -142,10 +122,13 @@ export async function POST(req) {
     };
 
     accounts.push(account);
-    await writeAccounts(accounts);
+    await setAccountsArray(accounts);
 
     return Response.json({ ok: true }, { status: 201 });
-  } catch {
+  } catch (e) {
+    if (e && e.code === "VERCEL_NO_KV") {
+      return Response.json({ error: e.message }, { status: 503 });
+    }
     return Response.json({ error: "Invalid request." }, { status: 400 });
   }
 }
