@@ -255,6 +255,9 @@ export default function SiteMenu() {
   const profileHref = lastEmail
     ? `/profile?email=${encodeURIComponent(lastEmail)}`
     : "/login";
+  const visitorHref = lastEmail
+    ? `/visitor?email=${encodeURIComponent(lastEmail)}`
+    : "/visitor";
 
   const onLogout = useCallback(() => {
     try {
@@ -547,7 +550,7 @@ export default function SiteMenu() {
                     </div>
                   )}
                   <Link
-                    href="/visitor"
+                    href={visitorHref}
                     onClick={close}
                     className={navClass(onVisitor)}
                   >

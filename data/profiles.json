@@ -12,15 +12,76 @@
           "current": true
         }
       ],
-      "workExperiences": [],
-      "programmingLanguages": [],
-      "databases": [],
-      "cloud": [],
-      "automation": [],
-      "tools": [],
-      "platforms": [],
-      "frameworks": [],
-      "updatedAt": "2026-04-22T18:35:44.660Z",
+      "workExperiences": [
+        {
+          "id": "1776887501300-3bfcf85d63ddd",
+          "companyName": "Beringhart",
+          "position": "Software Engineer",
+          "duties": [
+            "Building APIs",
+            "User Interactive Pages",
+            "System diagrams and architecture"
+          ]
+        },
+        {
+          "id": "1776887594939-fed698fd99694",
+          "companyName": "Viuhealth",
+          "position": "Senior Software Engineer",
+          "duties": [
+            "AWS integration",
+            "Dockerising applications",
+            "Infrastructure Automations"
+          ]
+        }
+      ],
+      "programmingLanguages": [
+        "javascript",
+        "typescript",
+        "python",
+        "java",
+        "c"
+      ],
+      "databases": [
+        "mongodb",
+        "postgresql",
+        "mysql",
+        "cassandra",
+        "couchdb"
+      ],
+      "cloud": [
+        "k8s",
+        "cloudflare",
+        "do",
+        "azure",
+        "grafana"
+      ],
+      "automation": [
+        "gitlab",
+        "junit",
+        "jenkins",
+        "cloudformation"
+      ],
+      "tools": [
+        "postman",
+        "excel",
+        "tableau",
+        "powerbi",
+        "googleanalytics"
+      ],
+      "platforms": [
+        "windows8",
+        "linux",
+        "kubernetes",
+        "docker"
+      ],
+      "frameworks": [
+        "angular",
+        "react",
+        "django",
+        "spring",
+        "express"
+      ],
+      "updatedAt": "2026-04-22T19:54:06.885Z",
       "imageUrl": "data:image/svg+xml;charset=utf-8,%0A%20%20%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2296%22%20height%3D%2296%22%20viewBox%3D%220%200%2096%2096%22%3E%0A%20%20%20%20%3Cdefs%3E%0A%20%20%20%20%20%20%3Cfilter%20id%3D%22pws%22%20x%3D%22-20%25%22%20y%3D%22-20%25%22%20width%3D%22140%25%22%20height%3D%22140%25%22%3E%0A%20%20%20%20%20%20%20%20%3CfeDropShadow%20dx%3D%220%22%20dy%3D%221%22%20stdDeviation%3D%221.4%22%20flood-opacity%3D%220.18%22%2F%3E%0A%20%20%20%20%20%20%3C%2Ffilter%3E%0A%20%20%20%20%3C%2Fdefs%3E%0A%20%20%20%20%3Crect%20x%3D%226%22%20y%3D%226%22%20width%3D%2284%22%20height%3D%2284%22%20rx%3D%2222%22%20fill%3D%22%23dc2626%22%20filter%3D%22url(%23pws)%22%2F%3E%0A%20%20%20%20%3Cpath%20d%3D%22M38%2032h-6l-4%206v8l4%204h4l-2%208h8l-2-8h4l4-4v-8l-4-6h-6v-4h-4v4z%22%20fill%3D%22%23fff%22%2F%3E%3Cpath%20d%3D%22M58%2030l12-2v6l-8%202v4l8%208v6l-10-2-2-4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.2%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%20%20%3C%2Fsvg%3E",
       "gender": "",
       "avatarId": "sp-strength",
@@ -28,11 +89,11 @@
         "type": "emoji",
         "value": "🐱"
       },
-      "profession": "",
-      "shortBio": "",
+      "profession": "Software Engineer",
+      "shortBio": "Software Engineer with 7+ years of experience, passionate about solving complex problems & creating elegant solutions through code.",
       "handles": {
-        "linkedIn": "",
-        "github": "",
+        "linkedIn": "https://www.linkedin.com/in/godfred-asumadu-asamoah-1ba453107/",
+        "github": "https://github.com/GodfredAsa",
         "gitlab": "",
         "otherSource": "bitbucket",
         "otherSourceUrl": ""
@@ -59,6 +120,32 @@
       "platforms": [],
       "frameworks": [],
       "updatedAt": "2026-04-22T16:19:41.350Z"
+    },
+    {
+      "email": "…",
+      "gender": "",
+      "avatarId": "",
+      "imageUrl": "",
+      "profileMood": null,
+      "profession": "",
+      "shortBio": "",
+      "education": [],
+      "workExperiences": [],
+      "handles": {
+        "linkedIn": "",
+        "github": "",
+        "gitlab": "",
+        "otherSource": "bitbucket",
+        "otherSourceUrl": ""
+      },
+      "programmingLanguages": [],
+      "databases": [],
+      "cloud": [],
+      "automation": [],
+      "tools": [],
+      "platforms": [],
+      "frameworks": [],
+      "updatedAt": "2026-04-22T19:01:59.563Z"
     }
   ]
 }
