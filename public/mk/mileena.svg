@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Mileena (stylized)">
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="#0b0f1a"/>
+  <circle cx="64" cy="50" r="24" fill="#b87a5c"/>
+  <rect x="34" y="46" width="16" height="6" rx="2" fill="#0b0f1a" opacity="0.85"/>
+  <rect x="78" y="46" width="16" height="6" rx="2" fill="#0b0f1a" opacity="0.85"/>
+  <path d="M46 64h36" stroke="#f472b6" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+  <text x="64" y="20" text-anchor="middle" font-size="8" font-family="ui-sans-serif, system-ui" fill="#fbcfe8" opacity="0.95">Mileena</text>
+</svg>

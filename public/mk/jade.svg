@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Jade (stylized)">
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="#0a1f1a"/>
+  <path d="M30 32h68l-6 8H36l-6-8Z" fill="#10b981" opacity="0.5"/>
+  <circle cx="64" cy="56" r="20" fill="#b87a5c"/>
+  <rect x="40" y="53" width="12" height="5" rx="2" fill="#0b0f1a" opacity="0.85"/>
+  <rect x="76" y="53" width="12" height="5" rx="2" fill="#0b0f1a" opacity="0.85"/>
+  <text x="64" y="20" text-anchor="middle" font-size="8" font-family="ui-sans-serif, system-ui" fill="#6ee7b7" opacity="0.95">Jade</text>
+</svg>

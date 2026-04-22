@@ -1,0 +1,33 @@
+{
+  "accounts": [
+    {
+      "id": "1f6ae5d7-b70f-4da7-935f-169f686cef88",
+      "email": "test@example.com",
+      "phone": "12025550199",
+      "fullName": "Test User",
+      "username": "testuser",
+      "passwordHash": "$2b$10$OQKH6PP4G0w4sHGvVNv2j.LpqJUBqTqpXz2BhzJI3MKww7OtClbMO",
+      "createdAt": "2026-04-22T15:51:27.185Z",
+      "education": [
+        {
+          "id": "e2",
+          "schoolName": "KNUST",
+          "program": "CS",
+          "startDate": "2022-09-01",
+          "endDate": "",
+          "current": true
+        }
+      ],
+      "updatedAt": "2026-04-22T16:19:41.351Z"
+    },
+    {
+      "id": "b4a9460f-4f2d-41e7-bec5-2bc6bcb75ee4",
+      "email": "degreatasaa@gmail.com",
+      "phone": "233240123456",
+      "fullName": "Godfred Asumadu",
+      "username": "degreatasa",
+      "passwordHash": "$2b$10$x3wz7D0W2aXIIp7e5UxvoeYAJ.L.drAGw6Ej/ldv9U/R5yjZ.i9XG",
+      "createdAt": "2026-04-22T15:52:59.160Z"
+    }
+  ]
+}

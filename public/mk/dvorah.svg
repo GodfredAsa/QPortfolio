@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="D'Vorah (stylized)">
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="#111827"/>
+  <path d="M40 32h48l-10 8H50l-10-8Z" fill="#a3e635" opacity="0.35"/>
+  <circle cx="64" cy="56" r="20" fill="#4b5563" opacity="0.85"/>
+  <text x="64" y="20" text-anchor="middle" font-size="7" font-family="ui-sans-serif, system-ui" fill="#d1fae5" opacity="0.95">DVorah</text>
+  <text x="64" y="100" text-anchor="middle" font-size="6" font-family="ui-sans-serif, system-ui" fill="#9ca3af" opacity="0.75">(bug motifs)</text>
+</svg>

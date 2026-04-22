@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Scorpion (stylized)">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#2b0b0b"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#g)"/>
+  <path d="M64 32c-12 0-20 7-20 20 0 9 3 16 7 20l7 6h12l7-6c4-4 7-11 7-20 0-13-8-20-20-20Z" fill="#f1c27d"/>
+  <rect x="38" y="50" width="14" height="6" rx="2" fill="#0b0f1a" opacity="0.85"/>
+  <rect x="76" y="50" width="14" height="6" rx="2" fill="#0b0f1a" opacity="0.85"/>
+  <path d="M52 80c4 4 8 4 12 0" fill="none" stroke="#0b0f1a" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  <text x="64" y="22" text-anchor="middle" font-size="10" font-family="ui-sans-serif, system-ui" fill="#e7a33a" opacity="0.9">Scorpion</text>
+</svg>
