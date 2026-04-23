@@ -2,7 +2,17 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ensureDefaultAdminAccount } from "@/lib/ensureDefaultAdmin";
 import { COOKIE_NAME, verifyAdminSessionToken } from "@/lib/adminSession";
-import { accountsCollection, profilesCollection, loginEventsCollection, ensureMongoIndexes } from "@/lib/mongoStore";
+import {
+  accountsCollection,
+  ensureMongoIndexes,
+  loginEventsCollection,
+  profileEducationCollection,
+  profileLinksCollection,
+  profilePersonalCollection,
+  profileSkillsCollection,
+  profileWorkCollection,
+  profilesCollection,
+} from "@/lib/mongoStore";
 
 function asArray(v) {
   return Array.isArray(v) ? v : null;
@@ -40,13 +50,16 @@ export async function POST(req) {
   }
 
   const accounts = asArray(json.accounts);
-  const profiles = asArray(json.profiles);
+  const personal = asArray(json.profile_personal) || [];
+  const links = asArray(json.profile_links) || [];
+  const education = asArray(json.profile_education) || [];
+  const work = asArray(json.profile_work) || [];
+  const skills = asArray(json.profile_skills) || [];
+  const profilesLegacy = asArray(json.profiles_legacy) || asArray(json.profiles) || [];
   if (!accounts) {
     return NextResponse.json({ error: "Invalid backup: `accounts` must be an array." }, { status: 400 });
   }
-  if (!profiles) {
-    return NextResponse.json({ error: "Invalid backup: `profiles` must be an array." }, { status: 400 });
-  }
+  // card collections are preferred; legacy profiles are optional
 
   const loginEvents = json.loginEvents ? asArray(json.loginEvents) : [];
   if (json.loginEvents != null && !loginEvents) {
@@ -54,16 +67,35 @@ export async function POST(req) {
   }
   const cleanLoginEvents = sanitizeLoginEvents(loginEvents);
 
-  const [acc, prof, log] = await Promise.all([
+  const [acc, legacyProf, log, personalColl, linksColl, eduColl, workColl, skillsColl] = await Promise.all([
     accountsCollection(),
     profilesCollection(),
     loginEventsCollection(),
+    profilePersonalCollection(),
+    profileLinksCollection(),
+    profileEducationCollection(),
+    profileWorkCollection(),
+    profileSkillsCollection(),
   ]);
 
   // Replace all data
-  await Promise.all([acc.deleteMany({}), prof.deleteMany({}), log.deleteMany({})]);
+  await Promise.all([
+    acc.deleteMany({}),
+    legacyProf.deleteMany({}),
+    log.deleteMany({}),
+    personalColl.deleteMany({}),
+    linksColl.deleteMany({}),
+    eduColl.deleteMany({}),
+    workColl.deleteMany({}),
+    skillsColl.deleteMany({}),
+  ]);
   if (accounts.length) await acc.insertMany(accounts, { ordered: false });
-  if (profiles.length) await prof.insertMany(profiles, { ordered: false });
+  if (profilesLegacy.length) await legacyProf.insertMany(profilesLegacy, { ordered: false });
+  if (personal.length) await personalColl.insertMany(personal, { ordered: false });
+  if (links.length) await linksColl.insertMany(links, { ordered: false });
+  if (education.length) await eduColl.insertMany(education, { ordered: false });
+  if (work.length) await workColl.insertMany(work, { ordered: false });
+  if (skills.length) await skillsColl.insertMany(skills, { ordered: false });
   if (cleanLoginEvents.length) await log.insertMany(cleanLoginEvents, { ordered: false });
 
   // Ensure admin always exists
@@ -72,7 +104,7 @@ export async function POST(req) {
   return NextResponse.json({
     ok: true,
     accountsCount: accounts.length,
-    profilesCount: profiles.length,
+    profilesCount: personal.length || profilesLegacy.length,
     loginEventsCount: cleanLoginEvents.length,
   });
 }

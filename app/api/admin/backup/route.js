@@ -2,7 +2,17 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ensureDefaultAdminAccount } from "@/lib/ensureDefaultAdmin";
 import { COOKIE_NAME, verifyAdminSessionToken } from "@/lib/adminSession";
-import { accountsCollection, profilesCollection, loginEventsCollection, ensureMongoIndexes } from "@/lib/mongoStore";
+import {
+  accountsCollection,
+  ensureMongoIndexes,
+  loginEventsCollection,
+  profileEducationCollection,
+  profileLinksCollection,
+  profilePersonalCollection,
+  profileSkillsCollection,
+  profileWorkCollection,
+  profilesCollection,
+} from "@/lib/mongoStore";
 
 function stripMongoId(doc) {
   if (!doc || typeof doc !== "object") return doc;
@@ -20,24 +30,43 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const [acc, prof, log] = await Promise.all([
+  const [acc, legacyProf, log] = await Promise.all([
     accountsCollection(),
     profilesCollection(),
     loginEventsCollection(),
   ]);
 
-  const [accounts, profiles, loginEvents] = await Promise.all([
+  const [
+    accounts,
+    legacyProfiles,
+    loginEvents,
+    personal,
+    links,
+    education,
+    work,
+    skills,
+  ] = await Promise.all([
     acc.find({}).toArray(),
-    prof.find({}).toArray(),
+    legacyProf.find({}).toArray(),
     log.find({}).sort({ at: 1 }).toArray(),
+    profilePersonalCollection().then((c) => c.find({}).toArray()),
+    profileLinksCollection().then((c) => c.find({}).toArray()),
+    profileEducationCollection().then((c) => c.find({}).toArray()),
+    profileWorkCollection().then((c) => c.find({}).toArray()),
+    profileSkillsCollection().then((c) => c.find({}).toArray()),
   ]);
 
   const payload = {
-    version: 1,
+    version: 2,
     app: "quickPortfolio",
     exportedAt: new Date().toISOString(),
     accounts: accounts.map(stripMongoId),
-    profiles: profiles.map(stripMongoId),
+    profile_personal: personal.map(stripMongoId),
+    profile_links: links.map(stripMongoId),
+    profile_education: education.map(stripMongoId),
+    profile_work: work.map(stripMongoId),
+    profile_skills: skills.map(stripMongoId),
+    profiles_legacy: legacyProfiles.map(stripMongoId),
     loginEvents: loginEvents.map(stripMongoId),
   };
 
