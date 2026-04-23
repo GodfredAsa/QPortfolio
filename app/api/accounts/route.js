@@ -97,6 +97,7 @@ export async function POST(req) {
       fullName,
       username,
       passwordHash,
+      status: "PENDING",
       createdAt: new Date().toISOString(),
     };
 

@@ -1,7 +1,12 @@
 import bcrypt from "bcryptjs";
 import { ensureDefaultAdminAccount } from "@/lib/ensureDefaultAdmin";
 import { appendLoginEvent } from "@/lib/loginEventsLog";
-import { ensureMongoIndexes, getAccountByEmail, normalizeEmail } from "@/lib/mongoStore";
+import {
+  ensureMongoIndexes,
+  getAccountByEmail,
+  normalizeAccountStatus,
+  normalizeEmail,
+} from "@/lib/mongoStore";
 
 export async function POST(req) {
   try {
@@ -21,6 +26,19 @@ export async function POST(req) {
     const account = await getAccountByEmail(email);
     if (!account?.passwordHash) {
       return Response.json({ error: "Invalid credentials." }, { status: 401 });
+    }
+
+    const status = normalizeAccountStatus(account.status);
+    if (status !== "APPROVED") {
+      return Response.json(
+        {
+          error:
+            status === "LOCKED"
+              ? "Your account is locked."
+              : "Your account is pending approval.",
+        },
+        { status: 403 },
+      );
     }
 
     const ok = await bcrypt.compare(password, account.passwordHash);
