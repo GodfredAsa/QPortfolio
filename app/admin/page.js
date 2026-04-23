@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Grand_Hotel } from "next/font/google";
 import AdminAnalyticsCharts from "../components/AdminAnalyticsCharts";
 import AdminDataBackupPanel from "../components/AdminDataBackupPanel";
+import AdminUserApprovals from "../components/AdminUserApprovals";
 
 const grandHotel = Grand_Hotel({
   subsets: ["latin"],
@@ -24,11 +25,17 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [data, setData] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
 
   const load = useCallback(async () => {
     setError("");
+    setRefreshing(true);
     try {
-      const res = await fetch("/api/admin/analytics", { credentials: "include" });
+      const res = await fetch(`/api/admin/analytics?t=${Date.now()}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
       if (res.status === 401) {
         setData(null);
         setView("login");
@@ -44,6 +51,7 @@ export default function AdminPage() {
       if (j?.ok) {
         setData(j);
         setView("dashboard");
+        setLastRefreshedAt(new Date().toISOString());
       } else {
         setView("login");
       }
@@ -51,6 +59,8 @@ export default function AdminPage() {
       setData(null);
       setError("Network error.");
       setView("login");
+    } finally {
+      setRefreshing(false);
     }
   }, []);
 
@@ -156,10 +166,16 @@ export default function AdminPage() {
                 onClick={() => {
                   void load();
                 }}
-                className="rounded-full border-0 bg-[#ececec] px-4 py-2 text-sm font-semibold text-[#29243b] shadow-[4px_4px_10px_rgba(0,0,0,0.06),-2px_-2px_6px_rgba(255,255,255,0.85)]"
+                disabled={refreshing}
+                className="rounded-full border-0 bg-[#ececec] px-4 py-2 text-sm font-semibold text-[#29243b] shadow-[4px_4px_10px_rgba(0,0,0,0.06),-2px_-2px_6px_rgba(255,255,255,0.85)] disabled:opacity-60"
               >
-                Refresh
+                {refreshing ? "Refreshing…" : "Refresh"}
               </button>
+              {lastRefreshedAt ? (
+                <span className="text-xs font-medium text-slate-500" translate="no">
+                  Updated {new Date(lastRefreshedAt).toLocaleTimeString()}
+                </span>
+              ) : null}
               <button
                 type="button"
                 onClick={() => {
@@ -186,6 +202,14 @@ export default function AdminPage() {
               </p>
               <p className="mt-0.5 text-xs text-slate-500">Saved portfolio profiles in data</p>
             </div>
+          </div>
+
+          <div className="mt-6">
+            <AdminUserApprovals
+              onChanged={() => {
+                void load();
+              }}
+            />
           </div>
 
           <div className="mt-6">
