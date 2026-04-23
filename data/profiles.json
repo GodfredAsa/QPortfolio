@@ -64,7 +64,6 @@
       "tools": [
         "postman",
         "excel",
-        "tableau",
         "powerbi",
         "googleanalytics"
       ],
@@ -81,7 +80,7 @@
         "spring",
         "express"
       ],
-      "updatedAt": "2026-04-22T20:17:38.804Z",
+      "updatedAt": "2026-04-22T22:46:59.974Z",
       "imageUrl": "data:image/svg+xml;charset=utf-8,%0A%20%20%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2296%22%20height%3D%2296%22%20viewBox%3D%220%200%2096%2096%22%3E%0A%20%20%20%20%3Cdefs%3E%0A%20%20%20%20%20%20%3Cfilter%20id%3D%22pws%22%20x%3D%22-20%25%22%20y%3D%22-20%25%22%20width%3D%22140%25%22%20height%3D%22140%25%22%3E%0A%20%20%20%20%20%20%20%20%3CfeDropShadow%20dx%3D%220%22%20dy%3D%221%22%20stdDeviation%3D%221.4%22%20flood-opacity%3D%220.18%22%2F%3E%0A%20%20%20%20%20%20%3C%2Ffilter%3E%0A%20%20%20%20%3C%2Fdefs%3E%0A%20%20%20%20%3Crect%20x%3D%226%22%20y%3D%226%22%20width%3D%2284%22%20height%3D%2284%22%20rx%3D%2222%22%20fill%3D%22%23ca8a04%22%20filter%3D%22url(%23pws)%22%2F%3E%0A%20%20%20%20%3Cpath%20d%3D%22M54%2016L32%2050h16l-8%2032%2030-40H50l-4-12z%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.95%22%2F%3E%0A%20%20%3C%2Fsvg%3E",
       "gender": "",
       "avatarId": "sp-lightning",
@@ -170,13 +169,15 @@
         "react",
         "nodejs"
       ],
-      "databases": [],
+      "databases": [
+        "dynamodb"
+      ],
       "cloud": [],
       "automation": [],
       "tools": [],
       "platforms": [],
       "frameworks": [],
-      "updatedAt": "2026-04-22T22:02:24.492Z"
+      "updatedAt": "2026-04-22T22:29:40.193Z"
     }
   ]
 }

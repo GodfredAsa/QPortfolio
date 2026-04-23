@@ -1,10 +1,11 @@
 import bcrypt from "bcryptjs";
 import { ensureDefaultAdminAccount } from "@/lib/ensureDefaultAdmin";
-import { getAccountsArray, setAccountsArray } from "@/lib/serverDataStore";
-
-function normalizeEmail(value) {
-  return String(value || "").trim().toLowerCase();
-}
+import {
+  ensureMongoIndexes,
+  getAccountByEmail,
+  insertAccount,
+  normalizeEmail,
+} from "@/lib/mongoStore";
 
 /** Digits only, min 10 max 15 (E.165-style without forcing country rules). */
 function normalizePhone(value) {
@@ -15,10 +16,6 @@ function isValidPhone(digits) {
   return typeof digits === "string" && digits.length >= 10 && digits.length <= 15;
 }
 
-function readAccounts() {
-  return getAccountsArray();
-}
-
 function accountPhoneDigits(phone) {
   if (phone == null) return "";
   return normalizePhone(String(phone));
@@ -26,13 +23,13 @@ function accountPhoneDigits(phone) {
 
 export async function GET(req) {
   try {
+    await ensureMongoIndexes();
     const { searchParams } = new URL(req.url);
     const email = normalizeEmail(searchParams.get("email"));
     if (!email) {
       return Response.json({ error: "email is required" }, { status: 400 });
     }
-    const accounts = await readAccounts();
-    const account = accounts.find((a) => normalizeEmail(a.email) === email);
+    const account = await getAccountByEmail(email);
     if (!account) {
       return Response.json({ error: "Not found" }, { status: 404 });
     }
@@ -48,7 +45,7 @@ export async function GET(req) {
       { status: 200 },
     );
   } catch (e) {
-    if (e && e.code === "VERCEL_NO_KV") {
+    if (e && e.code === "MONGO_MISSING_URI") {
       return Response.json({ error: e.message }, { status: 503 });
     }
     return Response.json({ error: "Invalid request." }, { status: 400 });
@@ -58,6 +55,7 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     await ensureDefaultAdminAccount();
+    await ensureMongoIndexes();
     const body = await req.json();
 
     const email = normalizeEmail(body?.email);
@@ -87,26 +85,6 @@ export async function POST(req) {
       );
     }
 
-    const accounts = await readAccounts();
-
-    const exists = accounts.some((a) => normalizeEmail(a.email) === email);
-    if (exists) {
-      return Response.json(
-        { error: "An account with this email already exists." },
-        { status: 409 },
-      );
-    }
-
-    const phoneTaken = accounts.some(
-      (a) => accountPhoneDigits(a.phone) === phoneDigits,
-    );
-    if (phoneTaken) {
-      return Response.json(
-        { error: "An account with this phone number already exists." },
-        { status: 409 },
-      );
-    }
-
     const passwordHash = await bcrypt.hash(password, 10);
 
     const account = {
@@ -115,18 +93,36 @@ export async function POST(req) {
         `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       email,
       phone: phoneDigits,
+      phoneDigits,
       fullName,
       username,
       passwordHash,
       createdAt: new Date().toISOString(),
     };
 
-    accounts.push(account);
-    await setAccountsArray(accounts);
+    try {
+      await insertAccount(account);
+    } catch (err) {
+      // Mongo duplicate key errors
+      if (err && err.code === 11000) {
+        const msg = String(err.message || "");
+        if (msg.includes("phoneDigits")) {
+          return Response.json(
+            { error: "An account with this phone number already exists." },
+            { status: 409 },
+          );
+        }
+        return Response.json(
+          { error: "An account with this email already exists." },
+          { status: 409 },
+        );
+      }
+      throw err;
+    }
 
     return Response.json({ ok: true }, { status: 201 });
   } catch (e) {
-    if (e && e.code === "VERCEL_NO_KV") {
+    if (e && e.code === "MONGO_MISSING_URI") {
       return Response.json({ error: e.message }, { status: 503 });
     }
     return Response.json({ error: "Invalid request." }, { status: 400 });

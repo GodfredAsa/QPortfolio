@@ -1,15 +1,12 @@
 import bcrypt from "bcryptjs";
 import { ensureDefaultAdminAccount } from "@/lib/ensureDefaultAdmin";
 import { appendLoginEvent } from "@/lib/loginEventsLog";
-import { getAccountsArray } from "@/lib/serverDataStore";
-
-function normalizeEmail(value) {
-  return String(value || "").trim().toLowerCase();
-}
+import { ensureMongoIndexes, getAccountByEmail, normalizeEmail } from "@/lib/mongoStore";
 
 export async function POST(req) {
   try {
     await ensureDefaultAdminAccount();
+    await ensureMongoIndexes();
     const body = await req.json();
     const email = normalizeEmail(body?.email);
     const password = String(body?.password || "");
@@ -21,8 +18,7 @@ export async function POST(req) {
       );
     }
 
-    const accounts = await getAccountsArray();
-    const account = accounts.find((a) => normalizeEmail(a.email) === email);
+    const account = await getAccountByEmail(email);
     if (!account?.passwordHash) {
       return Response.json({ error: "Invalid credentials." }, { status: 401 });
     }
@@ -52,7 +48,7 @@ export async function POST(req) {
       { status: 200 },
     );
   } catch (e) {
-    if (e && e.code === "VERCEL_NO_KV") {
+    if (e && e.code === "MONGO_MISSING_URI") {
       return Response.json({ error: e.message }, { status: 503 });
     }
     return Response.json({ error: "Invalid request." }, { status: 400 });
