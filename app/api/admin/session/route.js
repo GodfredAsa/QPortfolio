@@ -7,11 +7,7 @@ import {
   MAX_AGE_SEC,
   signAdminSession,
 } from "@/lib/adminSession";
-import { getAccountsArray } from "@/lib/serverDataStore";
-
-function normalizeEmail(value) {
-  return String(value || "").trim().toLowerCase();
-}
+import { ensureMongoIndexes, getAccountByEmail, normalizeEmail } from "@/lib/mongoStore";
 
 /**
  * @param {import("next/server").NextRequest} req
@@ -19,6 +15,7 @@ function normalizeEmail(value) {
 export async function POST(req) {
   try {
     await ensureDefaultAdminAccount();
+    await ensureMongoIndexes();
     const body = await req.json();
     const email = normalizeEmail(body?.email);
     const password = String(body?.password || "");
@@ -37,8 +34,7 @@ export async function POST(req) {
       );
     }
 
-    const accounts = await getAccountsArray();
-    const account = accounts.find((a) => normalizeEmail(a.email) === email);
+    const account = await getAccountByEmail(email);
     if (!account?.passwordHash) {
       return NextResponse.json(
         { error: "You do not have access to the dashboard." },
@@ -74,7 +70,7 @@ export async function POST(req) {
     });
     return res;
   } catch (e) {
-    if (e && e.code === "VERCEL_NO_KV") {
+    if (e && e.code === "MONGO_MISSING_URI") {
       return NextResponse.json({ error: e.message }, { status: 503 });
     }
     return NextResponse.json(

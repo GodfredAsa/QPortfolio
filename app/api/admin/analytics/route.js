@@ -2,42 +2,34 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ensureDefaultAdminAccount } from "@/lib/ensureDefaultAdmin";
 import { COOKIE_NAME, verifyAdminSessionToken } from "@/lib/adminSession";
-import { readLoginEvents } from "@/lib/loginEventsLog";
 import {
-  aggregateGenderForDonut,
-  buildDailySignupsAndLogins,
-} from "@/lib/adminAggregates";
-import { getAccountsArray, getProfilesArray } from "@/lib/serverDataStore";
+  ensureMongoIndexes,
+  countAccounts,
+  countProfiles,
+  genderDonut,
+  topProgrammingLanguages,
+  dailyCountsFromCollection,
+} from "@/lib/mongoStore";
 
-/**
- * @param {unknown[]} profiles
- * @param {number} limit
- * @returns {{ name: string, count: number }[]}
- */
-function aggregateTopProgrammingLanguages(profiles, limit = 12) {
-  /** @type {Record<string, number>} */
-  const counts = {};
-  for (const p of profiles) {
-    if (p == null || !Array.isArray(p.programmingLanguages)) continue;
-    for (const id of p.programmingLanguages) {
-      const k = String(id || "")
-        .trim()
-        .toLowerCase();
-      if (!k) continue;
-      counts[k] = (counts[k] || 0) + 1;
-    }
+function mergeDaily(signupsRows, loginsRows) {
+  const map = new Map();
+  for (const r of signupsRows) {
+    if (!r?._id) continue;
+    map.set(String(r._id), { date: String(r._id), signups: r.count || 0, logins: 0 });
   }
-  return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([id, count]) => ({
-      name: id.length ? id.charAt(0).toUpperCase() + id.slice(1) : id,
-      count,
-    }));
+  for (const r of loginsRows) {
+    if (!r?._id) continue;
+    const k = String(r._id);
+    const cur = map.get(k) || { date: k, signups: 0, logins: 0 };
+    cur.logins = r.count || 0;
+    map.set(k, cur);
+  }
+  return [...map.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export async function GET() {
   await ensureDefaultAdminAccount();
+  await ensureMongoIndexes();
   const store = await cookies();
   const token = store.get(COOKIE_NAME)?.value;
   if (!verifyAdminSessionToken(token)) {
@@ -47,26 +39,25 @@ export async function GET() {
     );
   }
 
-  const [accounts, profiles, { events: loginEvents }] = await Promise.all([
-    getAccountsArray(),
-    getProfilesArray(),
-    readLoginEvents(),
-  ]);
-
-  const genderDonut = aggregateGenderForDonut(profiles);
-  const dailyActivity = buildDailySignupsAndLogins(accounts, loginEvents, {
-    maxDays: 120,
-  });
-  const topLanguages = aggregateTopProgrammingLanguages(profiles, 12);
+  const [totalUsers, totalProfiles, donut, langs, signupsRows, loginsRows] =
+    await Promise.all([
+      countAccounts(),
+      countProfiles(),
+      genderDonut(),
+      topProgrammingLanguages(12),
+      dailyCountsFromCollection("accounts", "createdAt", 120),
+      dailyCountsFromCollection("login_events", "at", 120),
+    ]);
+  const dailyActivity = mergeDaily(signupsRows, loginsRows);
 
   return NextResponse.json({
     ok: true,
-    totalUsers: accounts.length,
-    totalProfiles: profiles.length,
-    genderDonut,
+    totalUsers,
+    totalProfiles,
+    genderDonut: donut,
     dailyActivity,
-    topProgrammingLanguages: topLanguages,
-    loginEventsCount: loginEvents.length,
+    topProgrammingLanguages: langs,
+    loginEventsCount: loginsRows.reduce((n, r) => n + (r?.count || 0), 0),
     generatedAt: new Date().toISOString(),
   });
 }

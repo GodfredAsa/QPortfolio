@@ -1,8 +1,10 @@
-import { getProfilesArray, setProfilesArray } from "@/lib/serverDataStore";
-
-function normalizeEmail(value) {
-  return String(value || "").trim().toLowerCase();
-}
+import {
+  ensureMongoIndexes,
+  getProfileByEmail,
+  upsertProfileByEmail,
+  updateProfileByEmail,
+  normalizeEmail,
+} from "@/lib/mongoStore";
 
 const OTHER_SOURCE_ALIASES = new Set(["bitbucket", "gitea"]);
 
@@ -91,11 +93,14 @@ function emptyProfile(email) {
 }
 
 async function readProfiles() {
-  return getProfilesArray();
+  await ensureMongoIndexes();
+  // legacy helper retained for minimal diffs; reads are direct by email in this route.
+  return [];
 }
 
 async function writeProfiles(profiles) {
-  return setProfilesArray(profiles);
+  // no-op; writes happen via Mongo update calls
+  return profiles;
 }
 
 export async function GET(req) {
@@ -106,8 +111,8 @@ export async function GET(req) {
   }
 
   try {
-    const profiles = await readProfiles();
-    const existing = profiles.find((p) => normalizeEmail(p.email) === email);
+    await ensureMongoIndexes();
+    let existing = await getProfileByEmail(email);
     if (existing) {
       const withHandles = {
         ...existing,
@@ -126,13 +131,11 @@ export async function GET(req) {
       return Response.json(withHandles, { status: 200 });
     }
 
-    const created = emptyProfile(email);
-    profiles.push(created);
-    await writeProfiles(profiles);
+    const created = await upsertProfileByEmail(email, emptyProfile(email));
 
     return Response.json(created, { status: 200 });
   } catch (e) {
-    if (e && e.code === "VERCEL_NO_KV") {
+    if (e && e.code === "MONGO_MISSING_URI") {
       return Response.json({ error: e.message }, { status: 503 });
     }
     return Response.json({ error: "Invalid request." }, { status: 400 });
@@ -227,8 +230,9 @@ export async function PUT(req) {
       return Response.json({ error: "email is required" }, { status: 400 });
     }
 
-    const profiles = await readProfiles();
-    const idx = profiles.findIndex((p) => normalizeEmail(p.email) === email);
+    await ensureMongoIndexes();
+    const existing = await getProfileByEmail(email);
+    const prevProfile = existing || emptyProfile(email);
 
     if (hasEducation && !Array.isArray(education)) {
       return Response.json(
@@ -385,7 +389,7 @@ export async function PUT(req) {
       return out;
     }
 
-    const prevProfile = idx >= 0 ? profiles[idx] : emptyProfile(email);
+    // prevProfile is fetched from Mongo above (or created empty)
     const mergedHandles =
       prevProfile.handles && typeof prevProfile.handles === "object"
         ? {
@@ -428,14 +432,10 @@ export async function PUT(req) {
       updatedAt: new Date().toISOString(),
     };
 
-    if (idx >= 0) profiles[idx] = next;
-    else profiles.push(next);
-
-    await writeProfiles(profiles);
-
-    return Response.json(next, { status: 200 });
+    const saved = await updateProfileByEmail(email, next);
+    return Response.json(saved, { status: 200 });
   } catch (e) {
-    if (e && e.code === "VERCEL_NO_KV") {
+    if (e && e.code === "MONGO_MISSING_URI") {
       return Response.json({ error: e.message }, { status: 503 });
     }
     return Response.json(

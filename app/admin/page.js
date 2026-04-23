@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Grand_Hotel } from "next/font/google";
 import AdminAnalyticsCharts from "../components/AdminAnalyticsCharts";
+import AdminDataBackupPanel from "../components/AdminDataBackupPanel";
 
 const grandHotel = Grand_Hotel({
   subsets: ["latin"],
@@ -185,6 +186,14 @@ export default function AdminPage() {
               </p>
               <p className="mt-0.5 text-xs text-slate-500">Saved portfolio profiles in data</p>
             </div>
+          </div>
+
+          <div className="mt-6">
+            <AdminDataBackupPanel
+              onDataChanged={() => {
+                void load();
+              }}
+            />
           </div>
 
           <AdminAnalyticsCharts
