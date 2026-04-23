@@ -1,8 +1,14 @@
 import {
   ensureMongoIndexes,
-  getProfileByEmail,
-  upsertProfileByEmail,
-  updateProfileByEmail,
+  ensureProfileCardsExist,
+  getFullProfileView,
+  migrateLegacyProfileToCardsIfNeeded,
+  upsertLegacyProfileView,
+  upsertEducation,
+  upsertLinks,
+  upsertPersonal,
+  upsertSkills,
+  upsertWork,
   normalizeEmail,
 } from "@/lib/mongoStore";
 
@@ -70,6 +76,7 @@ function sanitizeShortBioValue(raw) {
 }
 
 function emptyProfile(email) {
+  // Kept for API response shape; actual persistence is split by card collections.
   return {
     email,
     gender: "",
@@ -112,33 +119,22 @@ export async function GET(req) {
 
   try {
     await ensureMongoIndexes();
-    let existing = await getProfileByEmail(email);
-    if (existing) {
-      const withHandles = {
-        ...existing,
-        profession: typeof existing.profession === "string" ? existing.profession : "",
-        shortBio: typeof existing.shortBio === "string" ? existing.shortBio : "",
-        handles:
-          existing.handles && typeof existing.handles === "object"
-            ? {
-                ...emptyHandles(),
-                ...existing.handles,
-                otherSource:
-                  existing.handles.otherSource === "gitea" ? "gitea" : "bitbucket",
-              }
-            : emptyHandles(),
-      };
-      return Response.json(withHandles, { status: 200 });
+    await migrateLegacyProfileToCardsIfNeeded(email);
+    await ensureProfileCardsExist(email);
+    const view = await getFullProfileView(email);
+    if (view) {
+      await upsertLegacyProfileView(email, view);
     }
-
-    const created = await upsertProfileByEmail(email, emptyProfile(email));
-
-    return Response.json(created, { status: 200 });
+    return Response.json(view || emptyProfile(email), { status: 200 });
   } catch (e) {
     if (e && e.code === "MONGO_MISSING_URI") {
       return Response.json({ error: e.message }, { status: 503 });
     }
-    return Response.json({ error: "Invalid request." }, { status: 400 });
+    console.error("[api/profile GET] failed", e);
+    return Response.json(
+      { error: e && e.message ? String(e.message) : "Invalid request." },
+      { status: 400 },
+    );
   }
 }
 
@@ -231,8 +227,8 @@ export async function PUT(req) {
     }
 
     await ensureMongoIndexes();
-    const existing = await getProfileByEmail(email);
-    const prevProfile = existing || emptyProfile(email);
+    await migrateLegacyProfileToCardsIfNeeded(email);
+    await ensureProfileCardsExist(email);
 
     if (hasEducation && !Array.isArray(education)) {
       return Response.json(
@@ -389,55 +385,70 @@ export async function PUT(req) {
       return out;
     }
 
-    // prevProfile is fetched from Mongo above (or created empty)
-    const mergedHandles =
-      prevProfile.handles && typeof prevProfile.handles === "object"
-        ? {
-            ...emptyHandles(),
-            ...prevProfile.handles,
-            otherSource:
-              prevProfile.handles.otherSource === "gitea" ? "gitea" : "bitbucket",
-          }
-        : emptyHandles();
+    const updates = [];
 
-    const next = {
-      ...prevProfile,
-      email,
-      profession: hasHeadline
-        ? profession || ""
-        : typeof prevProfile.profession === "string"
-          ? prevProfile.profession
-          : "",
-      shortBio: hasHeadline
-        ? shortBio || ""
-        : typeof prevProfile.shortBio === "string"
-          ? prevProfile.shortBio
-          : "",
-      ...(hasImageUrl ? { imageUrl } : {}),
-      ...(hasGender ? { gender } : {}),
-      ...(hasAvatarId ? { avatarId } : {}),
-      ...(hasProfileMood ? { profileMood } : {}),
-      ...(hasEducation ? { education } : {}),
-      ...(hasWorkExperiences ? { workExperiences } : {}),
-      ...(hasProgrammingLanguages
-        ? { programmingLanguages: sanitizeIdArray(programmingLanguages) }
-        : {}),
-      ...(hasDatabases ? { databases: sanitizeIdArray(databases) } : {}),
-      ...(hasCloud ? { cloud: sanitizeIdArray(cloud) } : {}),
-      ...(hasAutomation ? { automation: sanitizeIdArray(automation) } : {}),
-      ...(hasPlatforms ? { platforms: sanitizeIdArray(platforms) } : {}),
-      ...(hasFrameworks ? { frameworks: sanitizeIdArray(frameworks) } : {}),
-      ...(hasTools ? { tools: sanitizeIdArray(tools) } : {}),
-      handles: hasHandles ? handles : mergedHandles,
-      updatedAt: new Date().toISOString(),
-    };
+    if (hasHeadline || hasImageUrl || hasGender || hasAvatarId || hasProfileMood) {
+      updates.push(
+        upsertPersonal(email, {
+          ...(hasHeadline ? { profession: profession || "", shortBio: shortBio || "" } : {}),
+          ...(hasImageUrl ? { imageUrl } : {}),
+          ...(hasGender ? { gender } : {}),
+          ...(hasAvatarId ? { avatarId } : {}),
+          ...(hasProfileMood ? { profileMood } : {}),
+        }),
+      );
+    }
 
-    const saved = await updateProfileByEmail(email, next);
-    return Response.json(saved, { status: 200 });
+    if (hasHandles) {
+      updates.push(upsertLinks(email, { handles }));
+    }
+
+    if (hasEducation) {
+      updates.push(upsertEducation(email, { education }));
+    }
+
+    if (hasWorkExperiences) {
+      updates.push(upsertWork(email, { workExperiences }));
+    }
+
+    if (
+      hasProgrammingLanguages ||
+      hasDatabases ||
+      hasCloud ||
+      hasAutomation ||
+      hasTools ||
+      hasPlatforms ||
+      hasFrameworks
+    ) {
+      updates.push(
+        upsertSkills(email, {
+          ...(hasProgrammingLanguages
+            ? { programmingLanguages: sanitizeIdArray(programmingLanguages) }
+            : {}),
+          ...(hasDatabases ? { databases: sanitizeIdArray(databases) } : {}),
+          ...(hasCloud ? { cloud: sanitizeIdArray(cloud) } : {}),
+          ...(hasAutomation ? { automation: sanitizeIdArray(automation) } : {}),
+          ...(hasPlatforms ? { platforms: sanitizeIdArray(platforms) } : {}),
+          ...(hasFrameworks ? { frameworks: sanitizeIdArray(frameworks) } : {}),
+          ...(hasTools ? { tools: sanitizeIdArray(tools) } : {}),
+        }),
+      );
+    }
+
+    if (updates.length) {
+      await Promise.all(updates);
+    }
+
+    const view = await getFullProfileView(email);
+    if (view) {
+      await upsertLegacyProfileView(email, view);
+    }
+    return Response.json(view || emptyProfile(email), { status: 200 });
   } catch (e) {
     if (e && e.code === "MONGO_MISSING_URI") {
       return Response.json({ error: e.message }, { status: 503 });
     }
+    console.error("[api/profile PUT] failed", e);
     return Response.json(
       { error: e && e.message ? String(e.message) : "Invalid request." },
       { status: 400 },

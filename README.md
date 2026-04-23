@@ -1,4 +1,4 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+Quick Portfolio is a Next.js app for building a public, read-only CV/portfolio link (`/visitor?email=...`) from a simple profile editor.
 
 ## Getting Started
 
@@ -16,9 +16,62 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This app uses **MongoDB Atlas** for persistence in production (Vercel/Netlify/serverless).
+
+- **Required**
+  - `MONGODB_URI`: MongoDB connection string (Atlas “Connect” → “Drivers” → Node.js)
+- **Optional**
+  - `MONGODB_DB`: Database name (defaults to `quickPortfolio`)
+
+Create a `.env.local` for local dev:
+
+```bash
+MONGODB_URI="mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/?retryWrites=true&w=majority"
+MONGODB_DB="quickPortfolio"
+```
+
+### MongoDB Atlas setup (Vercel / Netlify)
+
+- **Create a cluster**: Atlas → Create (free tier is fine)
+- **Create a DB user**: Database Access → Add New Database User (read/write)
+- **Network access**: Network Access → Add IP Address
+  - Quick start: `0.0.0.0/0` (tighten later)
+- **Copy connection string**: Atlas → Connect → Drivers → Node.js → copy SRV URI
+
+#### Vercel
+- Project → Settings → Environment Variables
+- Add `MONGODB_URI` (and optionally `MONGODB_DB`)
+- Redeploy
+
+#### Netlify
+- Site → Site configuration → Environment variables
+- Add `MONGODB_URI` (and optionally `MONGODB_DB`)
+- Trigger a new deploy
+
+### Troubleshooting
+
+- **Updates don’t persist on Vercel/Netlify**: you must use MongoDB (or another external DB). Writing to `data/*.json` won’t persist on serverless.
+- **503 “MONGODB_URI is not set”**: set the env var in your host and redeploy.
+- **Auth / connection errors**:
+  - check Atlas DB user/password
+  - check Network Access allowlist
+  - confirm the URI is the SRV connection string from Atlas
+
+### Data model (collections)
+
+To match the profile editor cards, MongoDB uses **one collection per card** (all keyed by `email`):
+
+- `accounts`
+- `profile_personal` (headline/summary, gender, avatar/image, mood)
+- `profile_links` (handles/links)
+- `profile_education` (education list)
+- `profile_work` (work experiences)
+- `profile_skills` (skills/tech arrays)
+- `login_events` (successful sign-ins for analytics)
+
+The app can also read from the legacy `profiles` collection and lazily migrates it into the card collections on first access.
 
 ## Learn More
 
